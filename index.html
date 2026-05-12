@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#FBF4E3"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="Liderança"/>
+<title>Leitura Diária do Líder</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=Lato:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:#FBF4E3;font-family:'Lato',sans-serif;color:#2A1F0E;min-height:100vh;}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#8B601060;border-radius:4px}
+.serif{font-family:'Cormorant Garamond',serif;}
+.screen{display:none;min-height:100vh;}
+.screen.active{display:block;}
+.max{max-width:460px;margin:0 auto;}
+
+/* ONBOARDING */
+.ob-wrap{padding:32px 22px 80px;max-width:440px;margin:0 auto;}
+.progress-bar{background:#D9CCB0;border-radius:10px;height:5px;margin-bottom:22px;}
+.progress-fill{background:#8B6010;height:100%;border-radius:10px;transition:width .4s;}
+.progress-label{display:flex;justify-content:space-between;margin-bottom:6px;font-size:10px;color:#8C7550;}
+.ob-title{font-size:28px;font-weight:400;color:#2A1F0E;margin-bottom:6px;}
+.ob-sub{font-size:13px;color:#8C7550;margin-bottom:20px;line-height:1.7;}
+.field-label{font-size:10px;letter-spacing:2px;color:#8B6010;text-transform:uppercase;font-weight:700;margin-bottom:6px;}
+.field-wrap{margin-bottom:18px;}
+input[type=text],input[type=time]{width:100%;padding:13px 14px;background:#fff;border:1.5px solid #D9CCB0;border-radius:10px;font-size:16px;color:#2A1F0E;font-family:'Lato',sans-serif;outline:none;-webkit-appearance:none;}
+input:focus{border-color:#8B6010;}
+.opt-card{display:flex;align-items:center;gap:12px;padding:13px 16px;background:#F3EAD0;border:2px solid #D9CCB0;border-radius:12px;cursor:pointer;margin-bottom:8px;transition:all .2s;}
+.opt-card.sel{background:#F5E6BE;border-color:#8B6010;}
+.opt-card .opt-ic{font-size:22px;}
+.opt-card .opt-name{font-size:14px;font-weight:700;color:#2A1F0E;}
+.opt-card.sel .opt-name{color:#8B6010;}
+.opt-card .opt-desc{font-size:11px;color:#8C7550;margin-top:2px;}
+.opt-card .chk{margin-left:auto;color:#8B6010;font-size:18px;display:none;}
+.opt-card.sel .chk{display:block;}
+.days-grid{display:flex;gap:8px;margin-bottom:20px;}
+.day-btn{flex:1;padding:12px;text-align:center;border-radius:10px;cursor:pointer;background:#F3EAD0;border:2px solid #D9CCB0;transition:all .2s;}
+.day-btn.sel{background:#F5E6BE;border-color:#8B6010;}
+.day-btn .dn{font-size:20px;font-weight:700;color:#2A1F0E;}
+.day-btn.sel .dn{color:#8B6010;}
+.day-btn .ds{font-size:9px;color:#8C7550;}
+.btn-wrap{display:flex;gap:10px;margin-top:28px;}
+.btn-back{flex:1;padding:14px;background:#F3EAD0;border:1.5px solid #D9CCB0;border-radius:12px;font-family:'Lato',sans-serif;font-size:15px;color:#5C4A2A;cursor:pointer;font-weight:700;}
+.btn-next{flex:2;padding:14px;background:#8B6010;border:none;border-radius:12px;font-family:'Lato',sans-serif;font-size:15px;color:#fff;font-weight:700;cursor:pointer;}
+.btn-next:disabled{background:#D9CCB0;cursor:not-allowed;}
+.gold-box{background:#F5E6BE;border-left:3px solid #8B6010;border-radius:0 10px 10px 0;padding:14px 18px;}
+
+/* APP */
+.app-header{padding:20px 20px 16px;background:#EDE0C4;border-bottom:2px solid #D9CCB0;}
+.tabs{display:flex;border-bottom:2px solid #D9CCB0;background:#F3EAD0;position:sticky;top:0;z-index:10;}
+.tab{background:transparent;border:none;cursor:pointer;padding:8px 0;flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;}
+.tab.on{background:#F5E6BE;}
+.tab .tic{font-size:15px;}
+.tab .tlb{font-size:9px;letter-spacing:.8px;text-transform:uppercase;color:#8C7550;font-weight:700;}
+.tab.on .tlb{color:#8B6010;}
+.tab .thr{font-size:8px;color:#D9CCB0;}
+.tab.on .thr{color:#8B601080;}
+.content{padding:4px 20px 100px;background:#FBF4E3;}
+.sec-label{font-size:9px;letter-spacing:2.5px;color:#8C7550;text-transform:uppercase;margin-bottom:14px;margin-top:26px;border-bottom:1px solid #D9CCB0;padding-bottom:8px;font-weight:700;}
+.card{background:#F3EAD0;border:1px solid #D9CCB0;border-radius:12px;padding:16px 18px;margin-bottom:12px;}
+.card-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.card-ic{font-size:22px;}
+.card-title{font-size:10px;color:#8B6010;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;}
+.card-sub{font-size:10px;color:#8C7550;margin-top:1px;}
+.card-body{font-size:15px;line-height:1.85;color:#5C4A2A;}
+.pbox{background:#F5E6BE;border-left:3px solid #8B6010;border-radius:0 10px 10px 0;padding:16px 20px;margin-top:20px;}
+.pbox-label{font-size:9px;letter-spacing:2px;color:#8B6010;text-transform:uppercase;margin-bottom:8px;font-weight:700;}
+.pbox-text{font-family:'Cormorant Garamond',serif;font-size:18px;font-style:italic;line-height:1.7;color:#2A1F0E;}
+.chk-item{display:flex;align-items:flex-start;gap:14px;padding:13px 0;border-bottom:1px solid #D9CCB0;cursor:pointer;}
+.chk-circle{width:22px;height:22px;border-radius:50%;flex-shrink:0;margin-top:1px;border:2px solid #8B6010;background:transparent;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.chk-circle.done{background:#8B6010;border-color:#8B6010;}
+.chk-circle.done::after{content:'✓';color:#fff;font-size:12px;font-weight:700;}
+.chk-txt{font-size:15px;line-height:1.65;color:#2A1F0E;}
+.chk-item.done-item .chk-txt{color:#8C7550;text-decoration:line-through;}
+.frase-box{margin-top:14px;padding:13px 16px;background:#F3EAD0;border:1px solid #D9CCB0;border-left:3px solid #8B6010;border-radius:0 10px 10px 0;}
+.ensino-box{background:#F3EAD0;border:1px solid #D9CCB0;border-radius:14px;padding:20px;}
+.tag{display:inline-block;background:#F5E6BE;color:#8B6010;border-radius:20px;padding:3px 14px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:14px;}
+.treino-header{background:#8B250008;border:1.5px solid #8B250030;border-radius:14px;padding:18px 20px;margin-bottom:16px;}
+.treino-table{background:#F3EAD0;border:1px solid #D9CCB0;border-radius:12px;overflow:hidden;margin-bottom:12px;}
+.treino-th{display:grid;grid-template-columns:1fr 90px 55px;padding:10px 16px;background:#EDE0C4;border-bottom:1px solid #D9CCB0;}
+.treino-td{display:grid;grid-template-columns:1fr 90px 55px;padding:13px 16px;border-bottom:1px solid #D9CCB0;}
+.treino-td:last-child{border-bottom:none;}
+.treino-td.alt{background:#FBF4E3;}
+.pilar-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px;}
+.pilar-card{cursor:pointer;border-radius:10px;padding:12px;border:1px solid #D9CCB0;background:#F3EAD0;transition:all .2s;}
+.pilar-card.active{background:#8B601010;}
+.pilar-dot{width:8px;height:8px;border-radius:50%;margin-bottom:7px;}
+.pilar-name{font-size:12px;font-weight:700;color:#2A1F0E;}
+.pilar-card.active .pilar-name{color:#8B6010;}
+.pilar-desc{font-size:12px;line-height:1.6;color:#5C4A2A;margin-top:5px;display:none;}
+.pilar-card.active .pilar-desc{display:block;}
+textarea{width:100%;padding:10px 12px;background:#fff;border:1.5px solid #D9CCB0;border-radius:8px;font-size:14px;color:#2A1F0E;font-family:'Lato',sans-serif;outline:none;resize:none;line-height:1.6;margin-bottom:8px;transition:border .2s;}
+textarea:focus,textarea.filled{border-color:#8B6010;}
+.save-btn{width:100%;padding:14px;background:#8B6010;border:none;border-radius:12px;font-family:'Lato',sans-serif;font-size:15px;color:#fff;font-weight:700;cursor:pointer;margin-bottom:4px;}
+.saved-box{background:#F0FFF4;border:1.5px solid #2A5C3A;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:10px;margin-bottom:4px;}
+.prog-bar{background:#D9CCB0;border-radius:10px;height:4px;width:66px;}
+.prog-fill{background:#8B6010;height:100%;border-radius:10px;transition:width .5s;}
+.week-grid{display:flex;gap:6px;}
+.week-day{flex:1;text-align:center;padding:8px 4px;border-radius:8px;}
+.week-day.treino-day{background:#F3EAD0;border:1px solid #D9CCB0;}
+.week-day.hoje{background:#8B6010;border:none;}
+.red-box{background:#FFF0EB;border-left:3px solid #8B2500;border-radius:0 10px 10px 0;padding:16px 20px;margin-top:20px;}
+.footer{margin-top:44px;text-align:center;padding-top:24px;border-top:2px solid #D9CCB0;}
+.conf-screen{min-height:100vh;background:#FBF4E3;max-width:440px;margin:0 auto;padding:32px 22px 80px;}
+.conf-row{display:flex;justify-content:space-between;padding:12px 16px;background:#F3EAD0;border:1px solid #D9CCB0;border-radius:10px;margin-bottom:8px;}
+.reset-btn{width:100%;margin-top:20px;padding:14px;background:#FFF0EB;border:1.5px solid #8B250040;border-radius:12px;font-family:'Lato',sans-serif;font-size:14px;color:#8B2500;cursor:pointer;font-weight:700;}
+.descanso-box{text-align:center;padding:40px 20px;}
+</style>
+</head>
+<body>
+
+<!-- TELA: ONBOARDING -->
+<div id="s-ob" class="screen active">
+<div class="ob-wrap" id="ob-wrap"></div>
+</div>
+
+<!-- TELA: APP -->
+<div id="s-app" class="screen">
+<div class="max">
+  <div class="app-header" id="app-header"></div>
+  <div class="tabs" id="tabs"></div>
+  <div class="content" id="content"></div>
+</div>
+</div>
+
+<!-- TELA: CONFIG -->
+<div id="s-conf" class="screen">
+<div class="conf-screen" id="conf-screen"></div>
+</div>
+
+<script>
+// ── DADOS ────────────────────────────────────────────────────────────────────
+const FRASES = [
+  {t:"Metas levam a um lugar. Missão define um destino.",f:"DNA Alta Performance"},
+  {t:"Líderes transformadores não gerenciam tarefas — transformam vidas.",f:"DNA Alta Performance"},
+  {t:"Alta performance não tem linha de chegada. Crescimento é processo, não destino.",f:"DNA Alta Performance"},
+  {t:"Você nasceu para gerar solução. A criatura nunca é maior que o criador.",f:"Geraldo Rufino"},
+  {t:"Todo mundo tem problema. A diferença está em quem você acredita ser diante dele.",f:"Geraldo Rufino"},
+  {t:"O líder que não reflete não aprende. O que não aprende repete.",f:"Método ENCARNA"},
+  {t:"Protagonismo começa antes da primeira reunião.",f:"Método Diário GAV"},
+  {t:"O corpo forte suporta os dias difíceis. Cuide dele hoje para liderar amanhã.",f:"Método Diário"},
+];
+const PILARES = [
+  {nome:"Deus",cor:"#B8860B",desc:"Âncora espiritual — oração antes do celular"},
+  {nome:"Saúde",cor:"#8B2500",desc:"Treino e movimento — combustível de liderança"},
+  {nome:"Família",cor:"#5C3A8B",desc:"Tempo presente — sem telas, sem trabalho"},
+  {nome:"Trabalho",cor:"#1A3A6B",desc:"3 prioridades diárias — impacto real"},
+  {nome:"Ambiente",cor:"#2A5C3A",desc:"Você é o termostato do seu ambiente"},
+  {nome:"Conhecimento",cor:"#1A5C6B",desc:"15 min de leitura + 1 insight por dia"},
+  {nome:"Amigos",cor:"#8B4A00",desc:"Reconheça 1 pessoa — conexão gera lealdade"},
+  {nome:"Finanças",cor:"#4A6B1A",desc:"2 min de consciência financeira diária"},
+];
+const PERFIS = {
+  lider:{nome:"Líder / Gestor",ic:"🏆",cor:"#1A3A6B",
+    pM:"Que tipo de líder meu time vai ver hoje?",
+    pT:"Estou desenvolvendo pessoas ou apenas cobrando?",
+    pN:"Hoje eu fui o líder que meu time merece?",
+    ensinamentos:[
+      {tema:"Gestor vs Líder Transformador",conteudo:"O gestor cobra — o líder transforma. Gestor é como o cobrador do ônibus: só pede o bilhete. Líder transformador é o motorista: conhece o destino, cuida dos passageiros e garante que todos cheguem.",acao:"Quando foi a última vez que você ajudou alguém crescer sem cobrar nada em troca?"},
+      {tema:"O Espírito dos 300",conteudo:"Time que compete internamente é como um exército que aponta a espada pro soldado ao lado. Time dos 300 aponta a espada pro inimigo — juntos.",acao:"Quem no seu time está precisando do seu escudo hoje?"},
+      {tema:"Pertencimento Autêntico",conteudo:"Pertencimento é como raiz de árvore: invisível, mas é ela que segura tudo quando a tempestade vem. Metas são galhos — importantes, mas caem sem raiz.",acao:"Que ação concreta você vai fazer esta semana para criar pertencimento?"},
+      {tema:"Autoridade Conquistada",conteudo:"Autoridade não vem do cargo. Vem da consistência, do exemplo e da presença real na vida da equipe. Você só é autoridade quando vive aquilo que fala.",acao:"Há coerência entre o que você fala e o que você pratica?"},
+      {tema:"Liderança como Sal e Luz",conteudo:"Sal: você não vê, mas sente falta quando não tem. Luz: quando acende, todo mundo enxerga. Líderes que formam deixam marca que nunca sai.",acao:"Que marca você está deixando na vida de cada pessoa do seu time?"},
+    ],
+    chM:["Âncora espiritual — oração antes do celular","15 min leitura de liderança","Defini as 3 prioridades de gestão","Planejei quem vou desenvolver hoje"],
+    chT:["Reconheci 1 pessoa publicamente","Tive 1 conversa de desenvolvimento","Check: gerando cultura ou apagando fogo?","Identifiquei 1 problema e propus solução"],
+    chN:["3 gratidões + 1 aprendizado","Família — presente de verdade","Revisei resultados do time","Dormi bem — 7h mínimo"]},
+  vendedor:{nome:"Vendedor / Captador",ic:"🎯",cor:"#2A5C3A",
+    pM:"Quantas famílias vou ajudar a realizar um sonho hoje?",
+    pT:"Estou sendo solução ou apenas fazendo contatos?",
+    pN:"Fui honesto e excelente com cada cliente?",
+    ensinamentos:[
+      {tema:"Narrativa Pessoal na Captação",conteudo:"Sem narrativa, o captador é um funcionário. Com narrativa conectada ao seu sonho, ele é um protagonista. Protagonista não precisa ser cobrado — ele corre atrás.",acao:"Por que você está neste trabalho? Onde quer estar em 2 anos?"},
+      {tema:"Hospitalidade como Valor",conteudo:"Hospitalidade não é protocolo. É uma postura de vida. Receber o cliente como alguém que importa — não como uma tarefa a cumprir.",acao:"Como você vai receber o próximo cliente como se fosse o mais importante?"},
+      {tema:"Consciência de Conversão",conteudo:"Qual é sua taxa de conversão hoje? Defina UMA ação para melhorar esta semana. Ação vira hábito vira resultado.",acao:"Qual ÚNICO comportamento vai mudar sua conversão esta semana?"},
+      {tema:"Você é Maior que a Objeção",conteudo:"A objeção não é o inimigo — é onde você prova quem é. O que muda não é o tamanho da objeção, é a sua capacidade de respondê-la.",acao:"Qual objeção do cliente está te travando? Como você é maior do que ela?"},
+      {tema:"Propósito Individual",conteudo:"Colaboradores com propósito claro entregam mais. Quando o trabalho muda a vida de famílias, ele deixa de ser obrigação e vira missão.",acao:"O que o seu trabalho hoje significa para as famílias dos seus clientes?"},
+    ],
+    chM:["Âncora espiritual — antes do celular","Revisei minha meta — sei onde estou","Defini quantos contatos farei hoje","Mentalidade: sou solução, não vendedor"],
+    chT:["Fiz minha cota de contatos","Fui honesto com cada cliente","Aprendi com 1 negativa de hoje","Check: resultado ou apenas movimento?"],
+    chN:["3 gratidões + 1 aprendizado","Família — presente de verdade","Revisei minha performance do dia","Preparei amanhã mentalmente"]},
+  empreendedor:{nome:"Empreendedor",ic:"🚀",cor:"#8B4A00",
+    pM:"Qual decisão de hoje vai impactar meu negócio em 5 anos?",
+    pT:"Estou construindo empresa ou apagando incêndio?",
+    pN:"Avancei hoje ou apenas sobrevivi?",
+    ensinamentos:[
+      {tema:"Mentalidade de Dono",conteudo:"Alta performance não é ausência de dificuldades — é a capacidade de transformar dificuldades em movimento. Líderes não esperam o problema desaparecer — eles se movem enquanto o problema existe.",acao:"Qual decisão você está postergando que precisa ser tomada hoje?"},
+      {tema:"Você é Maior que o Problema",conteudo:"O criador é sempre maior do que a criatura. Se o problema nasceu da sua empresa, você tem o que precisa para resolvê-lo.",acao:"Nomeie seu maior problema agora com clareza. Problema sem nome é ansiedade."},
+      {tema:"Visão + Execução",conteudo:"Toda empresa que deu certo foi melhorando a cada entrega. O que foi errado foi corrigido. Credibilidade se constrói entregando sempre mais do que prometeu.",acao:"O que você prometeu que ainda não entregou?"},
+      {tema:"Ciclo de Alta Performance",conteudo:"Consciência: onde está o negócio? Movimento: uma ação concreta. Repetição: sistematizar o que funciona. Otimização: a cada 30 dias, o que cortar?",acao:"Qual sistema do seu negócio mais precisa de otimização?"},
+      {tema:"Liderança que Multiplica",conteudo:"Você não escala sozinho. A empresa escala pela equipe. O líder que não forma outros, cria dependência — não legado.",acao:"Quem do seu time você está formando para o próximo nível?"},
+    ],
+    chM:["Âncora espiritual — antes do celular","Revisei as métricas principais","Defini a decisão mais importante hoje","Planejei quem do time vou desenvolver"],
+    chT:["Tomei a decisão mais importante","Conversei com 1 cliente","Check: estratégico ou operacional?","Gerei o ambiente da equipe"],
+    chN:["3 gratidões + 1 aprendizado","Família — desconectei do negócio","Revisei finanças — sei meus números","Planejei amanhã com clareza"]},
+  saude:{nome:"Saúde / Coach",ic:"💚",cor:"#8B2500",
+    pM:"Hoje vou cuidar do meu corpo ou negligenciá-lo?",
+    pT:"Estou pregando o que pratico?",
+    pN:"Meu corpo e mente foram tratados como prioridade?",
+    ensinamentos:[
+      {tema:"Corpo como Instrumento",conteudo:"Saúde é combustível de liderança. O líder que não cuida do corpo logo pede ao corpo para parar. Alta performance física e mental caminham juntas.",acao:"Como seu estado físico hoje está impactando sua presença?"},
+      {tema:"Consciência de Performance",conteudo:"Alta performance é um ciclo. Consciência: onde está meu corpo? Movimento: uma mudança de cada vez. Repetição: ação vira hábito. Otimização: mais com menos energia.",acao:"Qual hábito físico, mantido por 90 dias, vai mudar tudo?"},
+      {tema:"Você é Maior que a Desculpa",conteudo:"A desculpa mais comum é falta de tempo. Alta performance começa quando você para de gerenciar tempo e começa a gerenciar energia.",acao:"Qual desculpa você usa para não cuidar do seu corpo?"},
+      {tema:"Recuperação é Performance",conteudo:"Sono de qualidade é decisão de alta performance. Descanso e alegria de viver são combustível — não luxo.",acao:"Você está dormindo 7h? O que precisa mudar hoje?"},
+      {tema:"Disciplina como Identidade",conteudo:"Não espere motivação para agir. Aja para criar motivação. Disciplina não é força de vontade — é identidade.",acao:"Qual ritual diário define quem você é como profissional?"},
+    ],
+    chM:["Hidratação — água antes de qualquer coisa","Movimento matinal — 20 a 30 min","Intenção: quem vou impactar hoje?","Revisei planejamento de treinos/sessões"],
+    chT:["Comi bem — combustível para performance","Check de energia — como estou agora?","Apliquei o que sei ao meu próprio corpo?","Conexão com cliente além do técnico"],
+    chN:["3 gratidões + 1 aprendizado","Telas desligadas 30 min antes de dormir","Revisei recuperação — sono, alimentação","Família — presente e desconectado"]},
+  educador:{nome:"Educador / Professor",ic:"📚",cor:"#1A5C6B",
+    pM:"Qual aluno posso impactar de forma diferente hoje?",
+    pT:"Ensinei ou apenas transmiti conteúdo?",
+    pN:"Alguém vai dormir diferente por causa de mim hoje?",
+    ensinamentos:[
+      {tema:"Liderança na Sala de Aula",conteudo:"Professor que só transmite conteúdo é um manual ambulante. Professor transformador conecta o conteúdo à vida do aluno. Quando o aluno entende o porquê, o aprendizado é irreversível.",acao:"Qual aluno está perdido e precisa de uma conexão diferente?"},
+      {tema:"Narrativa que Ensina",conteudo:"A história por trás de um conceito vale mais que o conceito isolado. O educador que conta sua história de superação vira uma prova social viva.",acao:"Qual história de vida você pode usar hoje para ensinar o que o livro não consegue?"},
+      {tema:"Pertencimento na Turma",conteudo:"Alunos que pertencem aprendem mais. Pertencimento é invisível mas é o que segura tudo quando a pressão vem.",acao:"Qual aluno está se sentindo excluído na sua turma hoje?"},
+      {tema:"Você é Maior que a Dificuldade",conteudo:"Turmas difíceis, sistemas falhos, recursos escassos — o educador de alta performance não espera as condições ideais. Age com o que tem.",acao:"Qual dificuldade do sistema está te impedindo de ser o melhor educador?"},
+      {tema:"Presença como Ferramenta",conteudo:"Sua presença é seu maior instrumento. Alunos sentem quando o professor está presente ou apenas cumprindo protocolo.",acao:"Qual foi a última vez que um aluno disse que sua aula mudou algo?"},
+    ],
+    chM:["Âncora espiritual — antes do celular","Revisei o plano de aula com intenção real","Defini qual aluno vou observar especialmente","Entrei preparado para transformar alguém"],
+    chT:["Conectei conteúdo à vida de 1 aluno","Reconheci 1 avanço de um aluno","Check: ensinei ou cumpri currículo?","Conversei com 1 colega — conexão real"],
+    chN:["3 gratidões + 1 aprendizado","Família — desconectei da escola","15 min de leitura — minha formação não para","Dormi bem — amanhã preciso de presença total"]},
+};
+
+const EX = {
+  peito_gym:[["Supino Reto","4x10","60s"],["Supino Inclinado","3x12","60s"],["Crucifixo","3x12","45s"],["Crossover","3x15","45s"]],
+  costas_gym:[["Puxada Frontal","4x10","60s"],["Remada Baixa","4x10","60s"],["Remada Unilateral","3x12","45s"],["Pullover","3x12","45s"]],
+  pernas_gym:[["Agachamento","4x10","90s"],["Leg Press","4x12","60s"],["Cadeira Extensora","3x15","45s"],["Cadeira Flexora","3x15","45s"],["Panturrilha","4x20","30s"]],
+  ombros_gym:[["Desenvolvimento","4x10","60s"],["Elevação Lateral","4x12","45s"],["Elevação Frontal","3x12","45s"]],
+  biceps_gym:[["Rosca Direta","4x10","45s"],["Rosca Alternada","3x12","45s"],["Rosca Concentrada","3x12","30s"]],
+  triceps_gym:[["Tríceps Corda","4x12","45s"],["Tríceps Testa","3x12","45s"],["Mergulho","2x falha","30s"]],
+  full_gym:[["Agachamento","3x10","60s"],["Supino","3x10","60s"],["Remada","3x10","60s"],["Desenvolvimento","3x12","45s"],["Rosca","3x12","30s"],["Tríceps","3x12","30s"]],
+  hiit_gym:[["Esteira Sprint 30s/30s","8 rounds","—"],["Burpee","3x15","45s"],["Polichinelo","3x30","30s"],["Jumping Squat","3x20","45s"]],
+  full_home:[["Agachamento","3x15","45s"],["Flexão","3x15","45s"],["Remada c/ Haltere","3x12","45s"],["Avanço","3x12","45s"],["Polichinelo","3x30","30s"],["Prancha","3x45s","30s"]],
+  hiit_home:[["Burpee","4x10","45s"],["Mountain Climber","3x30","30s"],["Jumping Squat","3x15","45s"],["Polichinelo","3x30","30s"]],
+  peito_home:[["Flexão Normal","4x15","45s"],["Flexão Inclinada","3x12","45s"],["Crucifixo c/ Haltere","3x15","45s"]],
+  pernas_home:[["Agachamento Livre","4x15","45s"],["Agachamento Búlgaro","3x12 cada","60s"],["Avanço","3x12 cada","45s"],["Panturrilha","4x25","30s"]],
+  costas_home:[["Remada c/ Haltere","4x12","45s"],["Superman","3x20","30s"],["Remada Invertida","3x15","45s"]],
+  full_body:[["Agachamento","3x20","45s"],["Flexão","3x15","45s"],["Avanço","3x12","45s"],["Mountain Climber","3x20","30s"],["Superman","3x15","30s"],["Prancha","3x40s","30s"]],
+  hiit_body:[["Burpee","4x10","45s"],["Mountain Climber","4x20","30s"],["Jumping Squat","4x15","45s"],["Polichinelo","3x40","30s"]],
+  peito_body:[["Flexão Normal","4x20","45s"],["Flexão Inclinada","3x15","45s"],["Flexão Diamante","3x15","45s"]],
+  pernas_body:[["Agachamento","4x20","45s"],["Avanço","4x15 cada","45s"],["Elevação de Quadril","4x20","30s"],["Panturrilha","4x30","30s"]],
+};
+const AQUEC=["5 min caminhada/bicicleta leve","Mobilidade articular — pescoço, ombros, quadril","10 polichinelos leves","Respiração profunda — prepara mente e corpo"];
+const DESAC=["5 min caminhada leve","Alongamento dos grupos trabalhados","Respiração profunda x5","Beba água — hidratação pós-treino"];
+
+function gerarTreino(cfg, diaS){
+  const eq = cfg.equipamento==="gym"?"_gym":cfg.equipamento==="home"?"_home":"_body";
+  const n = parseInt(cfg.diasTreino);
+  const mapas = {
+    3:{1:"full",3:"full",5:"full"},
+    4:{1:"peito+triceps",2:"pernas",4:"costas+biceps",5:"ombros+hiit"},
+    5:{1:"peito+triceps",2:"pernas",3:"costas+biceps",4:"ombros",5:"hiit"},
+    6:{1:"peito+triceps",2:"pernas",3:"costas+biceps",4:"ombros+hiit",5:"peito+triceps",6:"pernas"},
+  };
+  const mapa = mapas[n]||mapas[3];
+  const tipo = mapa[diaS];
+  if(!tipo) return null;
+  let exs=[];
+  if(tipo==="full") exs=EX["full"+eq]||EX.full_body;
+  else if(tipo.includes("hiit")) exs=EX["hiit"+eq]||EX.hiit_body;
+  else {
+    tipo.split("+").forEach(g=>{
+      const k=g+eq;
+      if(EX[k]) exs=[...exs,...EX[k].slice(0,3)];
+    });
+  }
+  if(cfg.nivel==="iniciante") exs=exs.slice(0,4);
+  else if(cfg.nivel==="avancado") exs=exs.map(e=>{
+    const m=e[1].match(/^(\d+)x/);
+    return m?[e[0],(parseInt(m[1])+1)+"x"+e[1].slice(m[0].length),e[2]]:e;
+  });
+  const nomes={"full":"Treino Full Body","peito+triceps":"Peito + Tríceps","pernas":"Pernas","costas+biceps":"Costas + Bíceps","ombros":"Ombros","ombros+hiit":"Ombros + HIIT","hiit":"HIIT Cardio"};
+  const objTxt={emagrecer:"🔥 Queima de gordura",hipertrofia:"💪 Ganho muscular",condicionamento:"⚡ Condicionamento",saude:"💚 Saúde e bem-estar"}[cfg.objetivo]||"";
+  return{nome:nomes[tipo]||tipo,objTxt,exs};
+}
+
+// ── ESTADO ───────────────────────────────────────────────────────────────────
+let cfg=null, checks={}, diario={g1:"",g2:"",g3:"",aprendizado:"",melhoria:"",intencao:""};
+let abaAtual="manha", pilarAtivo=-1, diarioSalvo=false;
+const DS=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"], MS=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+
+function carregar(){
+  try{
+    const s=localStorage.getItem("ldr_cfg"); if(s) cfg=JSON.parse(s);
+    const c=localStorage.getItem("ldr_checks");
+    if(c){const p=JSON.parse(c); if(p.data===new Date().toDateString()) checks=p.checks||{};}
+    const d=localStorage.getItem("ldr_diario");
+    if(d){const p=JSON.parse(d); if(p.data===new Date().toDateString()) diario=p.diario||diario;}
+  }catch(e){}
+}
+function salvarCfg(){try{localStorage.setItem("ldr_cfg",JSON.stringify(cfg));}catch(e){}}
+function salvarChecks(){try{localStorage.setItem("ldr_checks",JSON.stringify({data:new Date().toDateString(),checks}));}catch(e){}}
+function salvarDiario(){try{localStorage.setItem("ldr_diario",JSON.stringify({data:new Date().toDateString(),diario}));}catch(e){}}
+
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── ONBOARDING ───────────────────────────────────────────────────────────────
+let obStep=0, obDados={
+  nome:"",empresa:"",perfil:"lider",
+  acordar:"04:30",trabInicio:"06:00",trabFim:"17:00",
+  familiaLabel:"Família",academiaHora:"20:00",treinoLabel:"Academia",
+  objetivo:"hipertrofia",nivel:"intermediario",diasTreino:"4",equipamento:"gym"
+};
+
+function obRender(){
+  const w=document.getElementById("ob-wrap");
+  let h="";
+  if(obStep>0){
+    h+=`<div class="progress-label"><span>Passo ${obStep} de 5</span><span style="color:#8B6010;font-weight:700">${obStep*20}%</span></div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${obStep*20}%"></div></div>`;
+  }
+  if(obStep===0){
+    h+=`<div style="text-align:center;padding:10px 0">
+      <div style="font-size:56px;margin-bottom:16px">📖</div>
+      <h1 class="serif" style="font-size:34px;font-weight:400;color:#2A1F0E;line-height:1.2;margin-bottom:12px">Leitura<br><span style="font-style:italic;color:#8B6010">Diária do Líder</span></h1>
+      <p style="font-size:14px;color:#5C4A2A;line-height:1.8;max-width:300px;margin:0 auto 20px">Conteúdo diário + treino personalizado para <strong>você</strong>.</p>
+    </div>
+    <div class="gold-box"><p class="serif" style="font-size:16px;font-style:italic;color:#2A1F0E;line-height:1.7">"Alta performance não tem linha de chegada. Crescimento é processo, não destino."</p></div>`;
+  } else if(obStep===1){
+    h+=`<h2 class="ob-title serif">Qual é o seu perfil?</h2>
+    <p class="ob-sub">O conteúdo vai ser adaptado para a sua profissão.</p>`;
+    Object.entries(PERFIS).forEach(([id,p])=>{
+      const sel=obDados.perfil===id?"sel":"";
+      h+=`<div class="opt-card ${sel}" onclick="obSel('perfil','${id}')">
+        <span class="opt-ic">${p.ic}</span>
+        <div><div class="opt-name">${p.nome}</div><div class="opt-desc">${p.pM}</div></div>
+        <span class="chk">✓</span></div>`;
+    });
+  } else if(obStep===2){
+    h+=`<h2 class="ob-title serif">Quem é você?</h2>
+    <p class="ob-sub">O app vai usar seu nome para personalizar.</p>
+    <div class="field-wrap"><div class="field-label">Seu nome</div><input type="text" id="f-nome" value="${obDados.nome}" placeholder="Ex: Carlos, Maria..."/></div>
+    <div class="field-wrap"><div class="field-label">Sua empresa / organização</div><input type="text" id="f-empresa" value="${obDados.empresa}" placeholder="Ex: GAV Resorts..."/></div>`;
+  } else if(obStep===3){
+    h+=`<h2 class="ob-title serif">Sua rotina de horários</h2>
+    <p class="ob-sub">O app abre no bloco certo conforme o horário.</p>
+    <div class="field-wrap"><div class="field-label">Acorda</div><input type="time" id="f-acordar" value="${obDados.acordar}"/></div>
+    <div class="field-wrap"><div class="field-label">Começa o trabalho</div><input type="time" id="f-trabInicio" value="${obDados.trabInicio}"/></div>
+    <div class="field-wrap"><div class="field-label">Termina o trabalho</div><input type="time" id="f-trabFim" value="${obDados.trabFim}"/></div>
+    <div class="field-wrap"><div class="field-label">Hora do treino</div><input type="time" id="f-academiaHora" value="${obDados.academiaHora}"/></div>
+    <div class="field-wrap"><div class="field-label">Nome do treino</div><input type="text" id="f-treinoLabel" value="${obDados.treinoLabel}" placeholder="Academia, Crossfit..."/></div>
+    <div class="field-wrap"><div class="field-label">Nome do tempo em família</div><input type="text" id="f-familiaLabel" value="${obDados.familiaLabel}" placeholder="Família, Casa..."/></div>`;
+  } else if(obStep===4){
+    h+=`<h2 class="ob-title serif">Seu objetivo no treino</h2>
+    <p class="ob-sub">O treino do dia vai ser montado para o seu objetivo.</p>`;
+    [["emagrecer","🔥","Queima de gordura e condicionamento"],
+     ["hipertrofia","💪","Ganho de massa muscular"],
+     ["condicionamento","⚡","Resistência física e disposição"],
+     ["saude","💚","Movimento, qualidade de vida, longevidade"]].forEach(([v,ic,desc])=>{
+      const sel=obDados.objetivo===v?"sel":"";
+      h+=`<div class="opt-card ${sel}" onclick="obSel('objetivo','${v}')">
+        <span class="opt-ic">${ic}</span>
+        <div><div class="opt-name">${v.charAt(0).toUpperCase()+v.slice(1)}</div><div class="opt-desc">${desc}</div></div>
+        <span class="chk">✓</span></div>`;
+    });
+  } else if(obStep===5){
+    h+=`<h2 class="ob-title serif">Nível e equipamento</h2>
+    <p class="ob-sub" style="margin-bottom:10px">Seu nível atual</p>`;
+    [["iniciante","Iniciante","Até 6 meses de treino"],
+     ["intermediario","Intermediário","6 meses a 2 anos de treino"],
+     ["avancado","Avançado","Mais de 2 anos de treino consistente"]].forEach(([v,n,d])=>{
+      const sel=obDados.nivel===v?"sel":"";
+      h+=`<div class="opt-card ${sel}" onclick="obSel('nivel','${v}')">
+        <div><div class="opt-name">${n}</div><div class="opt-desc">${d}</div></div>
+        <span class="chk">✓</span></div>`;
+    });
+    h+=`<p class="field-label" style="margin-top:20px;margin-bottom:10px">Dias de treino por semana</p>
+    <div class="days-grid">`;
+    ["3","4","5","6"].forEach(d=>{
+      h+=`<div class="day-btn ${obDados.diasTreino===d?"sel":""}" onclick="obSel('diasTreino','${d}')">
+        <div class="dn">${d}</div><div class="ds">dias</div></div>`;
+    });
+    h+=`</div><p class="field-label" style="margin-bottom:10px">Onde você treina?</p>`;
+    [["gym","🏋️","Academia (equipada)","Musculação, máquinas, halteres"],
+     ["home","🏠","Casa com halteres","Halteres, elásticos"],
+     ["body","🤸","Sem equipamento","Apenas peso corporal"]].forEach(([v,ic,n,d])=>{
+      const sel=obDados.equipamento===v?"sel":"";
+      h+=`<div class="opt-card ${sel}" onclick="obSel('equipamento','${v}')">
+        <span class="opt-ic">${ic}</span>
+        <div><div class="opt-name">${n}</div><div class="opt-desc">${d}</div></div>
+        <span class="chk">✓</span></div>`;
+    });
+  }
+
+  const podeAv=obStep===1?!!obDados.perfil:true;
+  h+=`<div class="btn-wrap">
+    ${obStep>0?`<button class="btn-back" onclick="obVoltar()">← Voltar</button>`:""}
+    <button class="btn-next" onclick="obAvancar()" ${!podeAv?"disabled":""}>${obStep===0?"Começar →":obStep===5?"✓ Abrir meu app":"Próximo →"}</button>
+  </div>`;
+  w.innerHTML=h;
+}
+
+function obSel(campo,valor){
+  obDados[campo]=valor;
+  obRender();
+}
+
+function obLerCampos(){
+  const campos=["nome","empresa","acordar","trabInicio","trabFim","academiaHora","treinoLabel","familiaLabel"];
+  campos.forEach(c=>{const el=document.getElementById("f-"+c); if(el) obDados[c]=el.value||obDados[c];});
+}
+
+function obVoltar(){obLerCampos();obStep--;obRender();}
+
+function obAvancar(){
+  obLerCampos();
+  if(obStep<5){obStep++;obRender();}
+  else{
+    if(!obDados.nome.trim()) obDados.nome="Líder";
+    cfg=Object.assign({},obDados);
+    salvarCfg();
+    const h=new Date().getHours(), ph=s=>parseInt(s.split(":")[0]);
+    if(h>=ph(cfg.acordar)&&h<ph(cfg.trabInicio)) abaAtual="manha";
+    else if(h>=ph(cfg.trabInicio)&&h<ph(cfg.trabFim)) abaAtual="trab";
+    else if(h>=ph(cfg.trabFim)&&h<ph(cfg.academiaHora)) abaAtual="fam";
+    else if(h>=ph(cfg.academiaHora)&&h<ph(cfg.academiaHora)+1) abaAtual="treino";
+    else abaAtual="noite";
+    renderApp();
+    show("s-app");
+  }
+}
+
+// ── APP ──────────────────────────────────────────────────────────────────────
+function renderApp(){
+  renderHeader();
+  renderTabs();
+  renderContent();
+}
+
+function renderHeader(){
+  const hoje=new Date(), dia=hoje.getDate(), p=PERFIS[cfg.perfil]||PERFIS.lider;
+  const allK=[...p.chM,...p.chT,...p.chN].map((_,i)=>`c${i}`);
+  const pct=Math.round(allK.filter(k=>checks[k]).length/allK.length*100);
+  const frase=FRASES[dia%FRASES.length];
+  document.getElementById("app-header").innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <span style="font-size:16px">${p.ic}</span>
+          <span style="font-size:9px;letter-spacing:2px;color:#8B6010;text-transform:uppercase;font-weight:700">${p.nome}</span>
+        </div>
+        <h1 class="serif" style="font-size:26px;font-weight:400;color:#2A1F0E;line-height:1.15">
+          Olá, <span style="font-style:italic;color:#8B6010">${cfg.nome}</span>
+        </h1>
+        ${cfg.empresa?`<p style="font-size:11px;color:#8C7550;margin-top:2px">${cfg.empresa}</p>`:""}
+      </div>
+      <div style="text-align:right">
+        <div class="serif" style="font-size:36px;font-weight:400;line-height:1">${dia}</div>
+        <div style="font-size:10px;color:#8C7550;letter-spacing:1px;margin-top:2px">${DS[hoje.getDay()]} · ${MS[hoje.getMonth()]}</div>
+        <div style="margin-top:8px;display:flex;align-items:center;gap:8px;justify-content:flex-end">
+          <div>
+            <div style="font-size:9px;color:#8C7550;margin-bottom:4px;font-weight:700">${pct}%</div>
+            <div class="prog-bar"><div class="prog-fill" style="width:${pct}%"></div></div>
+          </div>
+          <button onclick="showConf()" style="background:none;border:1px solid #D9CCB0;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:14px;color:#8C7550">⚙</button>
+        </div>
+      </div>
+    </div>
+    <div class="frase-box" style="margin-top:14px">
+      <p class="serif" style="font-size:16px;font-style:italic;line-height:1.6;color:#2A1F0E;margin-bottom:8px">"${frase.t}"</p>
+      <p style="font-size:9px;color:#8B6010;letter-spacing:2px;text-transform:uppercase;font-weight:700">— ${frase.f}</p>
+    </div>`;
+}
+
+function renderTabs(){
+  const tabs=[
+    {id:"manha",ic:"🌅",lb:"Manhã",hr:cfg.acordar.slice(0,5)},
+    {id:"trab",ic:"💼",lb:"Trabalho",hr:cfg.trabInicio.slice(0,5)},
+    {id:"fam",ic:"🏠",lb:cfg.familiaLabel,hr:cfg.trabFim.slice(0,5)},
+    {id:"treino",ic:"🏋️",lb:cfg.treinoLabel,hr:cfg.academiaHora.slice(0,5)},
+    {id:"noite",ic:"🌙",lb:"Noite",hr:"21h+"},
+  ];
+  document.getElementById("tabs").innerHTML=tabs.map(t=>
+    `<button class="tab ${abaAtual===t.id?"on":""}" onclick="mudaAba('${t.id}')">
+      <span class="tic">${t.ic}</span>
+      <span class="tlb">${t.lb}</span>
+      <span class="thr">${t.hr}</span>
+    </button>`
+  ).join("");
+}
+
+function mudaAba(id){abaAtual=id;renderTabs();renderContent();}
+
+function toggleCheck(id){
+  checks[id]=!checks[id];
+  salvarChecks();
+  const el=document.getElementById("chk-"+id);
+  if(el){
+    el.classList.toggle("done",checks[id]);
+    el.parentElement.classList.toggle("done-item",checks[id]);
+  }
+  renderHeader();
+}
+
+function sl(txt){return`<div class="sec-label">${txt}</div>`;}
+function card(ic,tit,sub,desc){
+  var subHtml=sub?'<div class="card-sub">'+sub+'</div>':'';return'<div class="card"><div class="card-head"><span class="card-ic">'+ic+'</span><div><div class="card-title">'+tit+'</div>'+subHtml+'</div></div><div class="card-body">'+desc+'</div></div>';
+}
+function pbox(lb,txt){var lbHtml=lb?'<div class="pbox-label">'+lb+'</div>':'';return'<div class="pbox">'+lbHtml+'<div class="pbox-text">'+txt+'</div></div>';}
+function chkItem(id,txt){
+  const done=checks[id];
+  return`<div class="chk-item ${done?"done-item":""}" onclick="toggleCheck('${id}')">
+    <div class="chk-circle ${done?"done":""}" id="chk-${id}"></div>
+    <span class="chk-txt">${txt}</span>
+  </div>`;
+}
+
+function renderContent(){
+  const p=PERFIS[cfg.perfil]||PERFIS.lider;
+  const dia=new Date().getDate(), diaS=new Date().getDay();
+  const ensino=p.ensinamentos[dia%p.ensinamentos.length];
+  let h="";
+
+  if(abaAtual==="manha"){
+    h+=sl(`Ritual da Manhã · ${cfg.acordar} – ${cfg.trabInicio}`);
+    h+=`<p style="font-size:13px;color:#5C4A2A;font-style:italic;margin-bottom:18px;line-height:1.8">"Este é o dia que o Senhor fez; alegremo-nos e nos regozijemos nele." — Sl 118:24</p>`;
+    h+=card("🙏","Âncora Espiritual",`${cfg.acordar} · 5 min`,"Antes do celular. 3 respirações, agradecimento, 1 oração. Pergunta: Quem eu quero ser hoje?");
+    h+=card("📖","Alimentação Mental","15 min de leitura","Liderança, desenvolvimento ou tema da sua área. Anote 1 insight aplicável ao seu dia.");
+    h+=card("🎯","3 Prioridades do Dia","10 min","P1: O que só EU posso fazer hoje? P2: Quem precisa de mim? P3: O que vou aprender?");
+    h+=card("🚀","Vai pro campo",`${cfg.trabInicio} · Início`,"Mente preparada. Prioridades definidas. Entra no modo protagonista — não no modo reativo.");
+    h+=sl("Check · Manhã");
+    p.chM.forEach((txt,i)=>h+=chkItem(`c${i}`,txt));
+    h+=pbox("Pergunta da Manhã",p.pM);
+  }
+
+  else if(abaAtual==="trab"){
+    h+=sl(`No Campo · ${cfg.trabInicio} – ${cfg.trabFim}`);
+    h+=card("⚡","Chegada com Intenção",cfg.trabInicio,"Qual energia você vai gerar hoje? Você é o termostato — não o termômetro do ambiente.");
+    h+=card("🤝","Conexão Humana","Almoço · 15 min","Almoce com alguém — sem pauta, apenas presença. 1 pergunta genuína sobre a vida da pessoa.");
+    h+=card("🧭","Check do Meio-Dia","5 min","Estou nas 3 prioridades? Estou sendo quem eu disse que seria esta manhã?");
+    h+=card("🌟","Reconhecimento","Tarde","Reconheça 1 pessoa. Identifique 1 problema e proponha solução — não só aponte.");
+    h+=sl("Check · Trabalho");
+    p.chT.forEach((txt,i)=>h+=chkItem(`c${p.chM.length+i}`,txt));
+    h+=sl("Ensino do Dia");
+    h+=`<div class="ensino-box">
+      <span class="tag">${p.nome}</span>
+      <h3 class="serif" style="font-size:21px;font-weight:600;margin-bottom:14px;line-height:1.3;color:#2A1F0E">${ensino.tema}</h3>
+      <p style="font-size:15px;line-height:1.9;color:#5C4A2A;margin-bottom:16px">${ensino.conteudo}</p>
+      <div style="border-top:1px solid #D9CCB0;padding-top:14px">
+        <p style="font-size:9px;color:#8B6010;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;font-weight:700">Pergunta Prática</p>
+        <p class="serif" style="font-size:17px;font-style:italic;color:#2A1F0E;line-height:1.7">"${ensino.acao}"</p>
+      </div></div>`;
+    h+=pbox("Pergunta da Tarde",p.pT);
+  }
+
+  else if(abaAtual==="fam"){
+    h+=sl(`${cfg.familiaLabel} · ${cfg.trabFim} – ${cfg.academiaHora}`);
+    h+=`<p style="font-size:13px;color:#5C4A2A;font-style:italic;margin-bottom:18px;line-height:1.8">Você deu seu dia ao trabalho. Agora dê estas horas para quem mais importa.</p>`;
+    h+=card("📵","Celular no Silencioso",`${cfg.trabFim} – ${cfg.academiaHora}`,"Presente de verdade. Sem notificações de trabalho. Este tempo é sagrado.");
+    h+=card("🍽️","Conexão Real","Sem telas","Pergunte: 'O que foi bom no seu dia?' Ouça de verdade. Presença genuína vale mais que presença física ausente.");
+    h+=card("🏋️",`Prep para ${cfg.treinoLabel}`,`Antes das ${cfg.academiaHora}`,"Hidrate bem. Alimentação pré-treino. Vai com energia para o treino.");
+    h+=sl(`Check · ${cfg.familiaLabel}`);
+    h+=chkItem("f0","Celular no silencioso — presente de verdade");
+    h+=chkItem("f1","Perguntei 'O que foi bom no seu dia?' e ouvi");
+    h+=pbox("Lembrete","O líder que cuida bem de casa, cuida melhor do time.");
+  }
+
+  else if(abaAtual==="treino"){
+    const treino=gerarTreino(cfg,diaS);
+    h+=sl(`${cfg.treinoLabel} · ${cfg.academiaHora} · ${["Domingo","Segunda","Terça","Quarta","Quinta","Sexta","Sábado"][diaS]}`);
+    if(treino){
+      const eqTxt={gym:"🏋️ Academia",home:"🏠 Casa",body:"🤸 Sem equip."}[cfg.equipamento];
+      const nivTxt={iniciante:"Iniciante",intermediario:"Intermediário",avancado:"Avançado"}[cfg.nivel];
+      h+=`<div class="treino-header">
+        <p style="font-size:9px;letter-spacing:2px;color:#8B2500;text-transform:uppercase;font-weight:700;margin-bottom:6px">Treino de Hoje</p>
+        <h2 class="serif" style="font-size:26px;font-weight:600;color:#2A1F0E;line-height:1.2;margin-bottom:10px">${treino.nome}</h2>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span style="font-size:11px;background:#F5E6BE;color:#8B6010;border-radius:20px;padding:3px 12px;font-weight:700">${treino.objTxt}</span>
+          <span style="font-size:11px;background:#F0F8FF;color:#1A3A6B;border-radius:20px;padding:3px 12px;font-weight:700">${nivTxt}</span>
+          <span style="font-size:11px;background:#F0FFF4;color:#2A5C3A;border-radius:20px;padding:3px 12px;font-weight:700">${eqTxt}</span>
+        </div></div>`;
+
+      h+=`<div class="card"><p style="font-size:10px;color:#2A5C3A;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:12px">🌡️ Aquecimento · 5–8 min</p>`;
+      AQUEC.forEach((a,i)=>h+=`<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px"><span style="font-size:13px;color:#8B6010;font-weight:700;min-width:18px">${i+1}.</span><p style="font-size:14px;color:#5C4A2A;line-height:1.5">${a}</p></div>`);
+      h+=`</div>`;
+
+      h+=`<p style="font-size:10px;letter-spacing:2px;color:#8B2500;text-transform:uppercase;font-weight:700;margin-bottom:12px;margin-top:20px">💪 Exercícios Principais</p>
+      <div class="treino-table">
+        <div class="treino-th">
+          <span style="font-size:9px;color:#8C7550;text-transform:uppercase;font-weight:700">Exercício</span>
+          <span style="font-size:9px;color:#8C7550;text-transform:uppercase;font-weight:700;text-align:center">Séries/Reps</span>
+          <span style="font-size:9px;color:#8C7550;text-transform:uppercase;font-weight:700;text-align:center">Pausa</span>
+        </div>`;
+      treino.exs.forEach(([n,sr,p],i)=>h+=`<div class="treino-td ${i%2?"alt":""}">
+        <span style="font-size:14px;color:#2A1F0E">${n}</span>
+        <span style="font-size:14px;color:#8B6010;font-weight:700;text-align:center">${sr}</span>
+        <span style="font-size:12px;color:#8C7550;text-align:center">${p}</span>
+      </div>`);
+      h+=`</div>`;
+
+      h+=`<div class="card"><p style="font-size:10px;color:#8B6010;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:12px">🧘 Desaceleração · 5 min</p>`;
+      DESAC.forEach((a,i)=>h+=`<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px"><span style="font-size:13px;color:#8B6010;font-weight:700;min-width:18px">${i+1}.</span><p style="font-size:14px;color:#5C4A2A;line-height:1.5">${a}</p></div>`);
+      h+=`</div>`;
+
+      h+=sl(`Check · ${cfg.treinoLabel}`);
+      h+=chkItem("a0","Aquecimento feito — corpo preparado");
+      h+=chkItem("a1","Treinei com foco — sem checar o celular");
+      h+=chkItem("a2","Hidratei bem antes, durante e depois");
+      h+=chkItem("a3","Desaceleração e alongamento feitos");
+
+      h+=`<div class="red-box">
+        <p style="font-size:9px;letter-spacing:2px;color:#8B2500;text-transform:uppercase;margin-bottom:8px;font-weight:700">Disciplina de Alta Performance</p>
+        <p class="serif" style="font-size:17px;font-style:italic;line-height:1.7;color:#2A1F0E">"O corpo forte suporta os dias difíceis. Cuide dele hoje para liderar amanhã."</p></div>`;
+
+      h+=sl("Seus dias de treino esta semana");
+      const mapas={3:{1:true,3:true,5:true},4:{1:true,2:true,4:true,5:true},5:{1:true,2:true,3:true,4:true,5:true},6:{1:true,2:true,3:true,4:true,5:true,6:true}};
+      const mapa=mapas[parseInt(cfg.diasTreino)]||mapas[3];
+      h+=`<div class="week-grid">`;
+      [1,2,3,4,5,6,0].forEach(d=>{
+        const tem=!!mapa[d], hoje=d===diaS;
+        h+=`<div class="week-day ${hoje?"hoje":tem?"treino-day":""}">
+          <p style="font-size:9px;color:${hoje?"#fff":tem?"#2A1F0E":"#D9CCB0"};font-weight:700">${"SMTQQS S"[d]}</p>
+          <p style="font-size:12px;margin-top:2px">${tem?"💪":"—"}</p>
+        </div>`;
+      });
+      h+=`</div>`;
+    } else {
+      h+=`<div class="descanso-box">
+        <div style="font-size:52px;margin-bottom:16px">😌</div>
+        <h2 class="serif" style="font-size:24px;font-weight:400;color:#2A1F0E;margin-bottom:12px">Dia de Descanso</h2>
+        <p style="font-size:14px;color:#5C4A2A;line-height:1.8;max-width:280px;margin:0 auto 20px">Descanso é parte do treino. O músculo cresce na recuperação, não na academia.</p>
+        <div class="gold-box" style="text-align:left">
+          <p class="serif" style="font-size:16px;font-style:italic;color:#2A1F0E;line-height:1.7">"Caminhada leve, alongamento, hidratação. O corpo que descansa bem, treina melhor amanhã."</p>
+        </div></div>`;
+    }
+  }
+
+  else if(abaAtual==="noite"){
+    h+=sl("Ritual da Noite · 21h – 22h");
+    h+=`<p style="font-size:13px;color:#5C4A2A;font-style:italic;margin-bottom:18px;line-height:1.8">"Seja forte e corajoso. Não se apavore nem desanime, pois o Senhor, o seu Deus, estará com você." — Js 1:9</p>`;
+
+    h+=sl("Diário do Líder · Escreva agora");
+    h+=`<div class="card">
+      <p style="font-size:9px;letter-spacing:2px;color:#8B6010;text-transform:uppercase;margin-bottom:4px;font-weight:700">🙏 3 Gratidões</p>
+      <p class="serif" style="font-size:14px;font-style:italic;color:#8C7550;margin-bottom:12px">O que aconteceu de bom hoje?</p>
+      <textarea id="d-g1" rows="2" placeholder="Gratidão 1..." onchange="saveDiario('g1',this.value)" oninput="this.classList.toggle('filled',this.value.length>0)">${diario.g1}</textarea>
+      <textarea id="d-g2" rows="2" placeholder="Gratidão 2..." onchange="saveDiario('g2',this.value)" oninput="this.classList.toggle('filled',this.value.length>0)">${diario.g2}</textarea>
+      <textarea id="d-g3" rows="2" placeholder="Gratidão 3..." onchange="saveDiario('g3',this.value)" oninput="this.classList.toggle('filled',this.value.length>0)">${diario.g3}</textarea>
+    </div>`;
+    h+=`<div class="card">
+      <p style="font-size:9px;letter-spacing:2px;color:#8B6010;text-transform:uppercase;margin-bottom:4px;font-weight:700">💡 1 Aprendizado</p>
+      <p class="serif" style="font-size:14px;font-style:italic;color:#8C7550;margin-bottom:12px">O que o dia me ensinou?</p>
+      <textarea id="d-ap" rows="3" placeholder="Ex: Aprendi que devo ouvir mais antes de responder..." onchange="saveDiario('aprendizado',this.value)" oninput="this.classList.toggle('filled',this.value.length>0)">${diario.aprendizado}</textarea>
+    </div>`;
+    h+=`<div class="card">
+      <p style="font-size:9px;letter-spacing:2px;color:#8B6010;text-transform:uppercase;margin-bottom:4px;font-weight:700">⚡ 1 Melhoria</p>
+      <p class="serif" style="font-size:14px;font-style:italic;color:#8C7550;margin-bottom:12px">O que farei diferente amanhã?</p>
+      <textarea id="d-me" rows="3" placeholder="Ex: Vou acordar 15 min antes para ter mais calma..." onchange="saveDiario('melhoria',this.value)" oninput="this.classList.toggle('filled',this.value.length>0)">${diario.melhoria}</textarea>
+    </div>`;
+    h+=`<div class="card">
+      <p style="font-size:9px;letter-spacing:2px;color:#8B6010;text-transform:uppercase;margin-bottom:4px;font-weight:700">🌅 1 Intenção</p>
+      <p class="serif" style="font-size:14px;font-style:italic;color:#8C7550;margin-bottom:12px">Como quero que seja amanhã?</p>
+      <textarea id="d-in" rows="3" placeholder="Ex: Quero estar mais presente com o meu time..." onchange="saveDiario('intencao',this.value)" oninput="this.classList.toggle('filled',this.value.length>0)">${diario.intencao}</textarea>
+    </div>`;
+
+    const temAlgo=diario.g1||diario.g2||diario.g3||diario.aprendizado||diario.melhoria||diario.intencao;
+    if(diarioSalvo){
+      h+=`<div class="saved-box"><span style="font-size:20px">✅</span><p style="font-size:14px;color:#2A5C3A;font-weight:700">Diário de hoje salvo! Boa noite, ${cfg.nome}.</p></div>`;
+    } else {
+      h+=`<button class="save-btn" onclick="fecharDia()">✓ Fechar o dia — Salvar reflexão</button>`;
+    }
+
+    h+=sl("Check · Noite");
+    p.chN.forEach((txt,i)=>h+=chkItem(`c${p.chM.length+p.chT.length+i}`,txt));
+
+    h+=sl("8 Pilares · Radar Semanal");
+    h+=`<div class="pilar-grid">`;
+    PILARES.forEach((pl,i)=>{
+      const at=pilarAtivo===i;
+      h+=`<div class="pilar-card ${at?"active":""}" onclick="togglePilar(${i})" style="${at?`border-color:${pl.cor}60;background:${pl.cor}10`:""}">
+        <div class="pilar-dot" style="background:${pl.cor}"></div>
+        <div class="pilar-name" style="${at?`color:${pl.cor}`""}">${pl.nome}</div>
+        <div class="pilar-desc">${pl.desc}</div>
+      </div>`;
+    });
+    h+=`</div>`;
+    h+=pbox("Pergunta Final do Dia",`"${p.pN}"`);
+  }
+
+  h+=`<div class="footer">
+    <p class="serif" style="font-size:14px;font-style:italic;color:#5C4A2A;line-height:1.9">"A questão não é se você pode alcançar alta performance.<br>A questão é: você está disposto a se tornar quem precisa ser?"</p>
+    <p style="font-size:9px;color:#8C7550;letter-spacing:2px;margin-top:12px;text-transform:uppercase;font-weight:700">${cfg.empresa||"Leitura Diária do Líder"}</p>
+  </div>`;
+
+  document.getElementById("content").innerHTML=h;
+  // Restaurar valores dos textareas
+  if(abaAtual==="noite"){
+    ["g1","g2","g3"].forEach((k,i)=>{const el=document.getElementById(`d-g${i+1}`);if(el){el.value=diario[k];el.classList.toggle("filled",!!diario[k]);}});
+    const ap=document.getElementById("d-ap");if(ap){ap.value=diario.aprendizado;ap.classList.toggle("filled",!!diario.aprendizado);}
+    const me=document.getElementById("d-me");if(me){me.value=diario.melhoria;me.classList.toggle("filled",!!diario.melhoria);}
+    const inc=document.getElementById("d-in");if(inc){inc.value=diario.intencao;inc.classList.toggle("filled",!!diario.intencao);}
+  }
+}
+
+function saveDiario(campo,val){
+  diario[campo]=val;
+  salvarDiario();
+}
+
+function fecharDia(){
+  // Captura valores antes de salvar
+  const ids={g1:"d-g1",g2:"d-g2",g3:"d-g3",aprendizado:"d-ap",melhoria:"d-me",intencao:"d-in"};
+  Object.entries(ids).forEach(([k,id])=>{const el=document.getElementById(id);if(el)diario[k]=el.value;});
+  salvarDiario();
+  diarioSalvo=true;
+  renderContent();
+}
+
+function togglePilar(i){
+  pilarAtivo=pilarAtivo===i?-1:i;
+  renderContent();
+}
+
+function showConf(){
+  const p=PERFIS[cfg.perfil]||PERFIS.lider;
+  document.getElementById("conf-screen").innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+      <button onclick="show('s-app');renderApp()" style="background:none;border:none;cursor:pointer;font-size:22px;color:#8B6010">←</button>
+      <h2 class="serif" style="font-size:26px;font-weight:400;color:#2A1F0E">Configurações</h2>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <span style="font-size:28px">${p.ic}</span>
+        <div>
+          <p style="font-size:9px;color:#8C7550;text-transform:uppercase;letter-spacing:1.5px;font-weight:700">${p.nome}</p>
+          <p style="font-size:20px;font-weight:700;color:#2A1F0E">${cfg.nome}</p>
+        </div>
+      </div>
+      ${cfg.empresa?`<p style="font-size:13px;color:#5C4A2A">${cfg.empresa}</p>`:""}
+    </div>
+    ${[
+      ["Objetivo",{emagrecer:"🔥 Emagrecer",hipertrofia:"💪 Hipertrofia",condicionamento:"⚡ Condicionamento",saude:"💚 Saúde"}[cfg.objetivo]||cfg.objetivo],
+      ["Nível",{iniciante:"Iniciante",intermediario:"Intermediário",avancado:"Avançado"}[cfg.nivel]||cfg.nivel],
+      ["Dias/semana",cfg.diasTreino+" dias"],
+      ["Equipamento",{gym:"Academia",home:"Casa c/ halteres",body:"Sem equipamento"}[cfg.equipamento]||cfg.equipamento],
+      ["Trabalho",`${cfg.trabInicio} → ${cfg.trabFim}`],
+      [cfg.treinoLabel,cfg.academiaHora],
+    ].map(([l,v])=>`<div class="conf-row"><span style="font-size:13px;color:#5C4A2A">${l}</span><span style="font-size:14px;font-weight:700;color:#8B6010">${v}</span></div>`).join("")}
+    <button class="reset-btn" onclick="resetar()">Reconfigurar do zero</button>`;
+  show("s-conf");
+}
+
+function resetar(){
+  try{localStorage.removeItem("ldr_cfg");localStorage.removeItem("ldr_checks");localStorage.removeItem("ldr_diario");}catch(e){}
+  cfg=null; checks={}; diario={g1:"",g2:"",g3:"",aprendizado:"",melhoria:"",intencao:""};
+  obStep=0; obDados={nome:"",empresa:"",perfil:"lider",acordar:"04:30",trabInicio:"06:00",trabFim:"17:00",familiaLabel:"Família",academiaHora:"20:00",treinoLabel:"Academia",objetivo:"hipertrofia",nivel:"intermediario",diasTreino:"4",equipamento:"gym"};
+  obRender();
+  show("s-ob");
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+carregar();
+if(cfg){
+  const h=new Date().getHours(), ph=s=>parseInt(s.split(":")[0]);
+  if(h>=ph(cfg.acordar)&&h<ph(cfg.trabInicio)) abaAtual="manha";
+  else if(h>=ph(cfg.trabInicio)&&h<ph(cfg.trabFim)) abaAtual="trab";
+  else if(h>=ph(cfg.trabFim)&&h<ph(cfg.academiaHora)) abaAtual="fam";
+  else if(h>=ph(cfg.academiaHora)&&h<ph(cfg.academiaHora)+1) abaAtual="treino";
+  else abaAtual="noite";
+  renderApp();
+  show("s-app");
+} else {
+  obRender();
+  show("s-ob");
+}
+</script>
+</body>
+</html>
