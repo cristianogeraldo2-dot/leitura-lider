@@ -369,12 +369,28 @@ async function carregarFinancas(){
   financasCarregando=true;
   if(abaAtual==="financas") renderContent();
   try{
-    const [{data:accs},{data:ciclos},{data:txs},{data:alertas}] = await Promise.all([
+    const hoje=new Date();
+    const inicioMes=new Date(hoje.getFullYear(),hoje.getMonth(),1).toISOString().slice(0,10);
+    const inicioProxMes=new Date(hoje.getFullYear(),hoje.getMonth()+1,1).toISOString().slice(0,10);
+    const [{data:accs},{data:ciclos},{data:txs},{data:alertas},{data:txsMes},{data:cats}] = await Promise.all([
       sb.from('accounts').select('balance,account_type,is_active,name,institution_label,masked_number').eq('is_active',true),
       sb.from('missao_5k_cycles').select('id,start_date').order('start_date',{ascending:false}).limit(1),
       sb.from('transactions').select('description,merchant_name,amount,date').order('date',{ascending:false}).limit(6),
       sb.from('alerts').select('id,type,severity,title,message,created_at').is('dismissed_at',null).order('created_at',{ascending:false}).limit(8),
+      sb.from('transactions').select('amount,category_id,date').gte('date',inicioMes).lt('date',inicioProxMes),
+      sb.from('categories').select('id,name'),
     ]);
+    const catMap={};
+    (cats||[]).forEach(c=>catMap[c.id]=c.name);
+    const gastoPorCat={};
+    (txsMes||[]).forEach(t=>{
+      const v=Number(t.amount||0);
+      if(v>=0) return; // só despesas (valores negativos)
+      const nome=catMap[t.category_id]||"Sem categoria";
+      gastoPorCat[nome]=(gastoPorCat[nome]||0)+(-v);
+    });
+    const categorias=Object.entries(gastoPorCat).map(([nome,total])=>({nome,total})).sort((a,b)=>b.total-a.total);
+    const totalGastoMes=categorias.reduce((s,c)=>s+c.total,0);
     const ehPassivo=t=>t==="credit_card"||t==="loan"||t==="financing";
     // Cartão/empréstimo: o "balance" é o quanto você DEVE, então entra negativo no patrimônio.
     const saldoTotal=(accs||[]).reduce((s,a)=>{
@@ -387,7 +403,7 @@ async function carregarFinancas(){
       const {data:st}=await sb.from('v_missao_5k_status').select('*').eq('cycle_id',ciclos[0].id).maybeSingle();
       statusCiclo=st;
     }
-    dadosFinancas={saldoTotal,dividaCartao,statusCiclo,txs:txs||[],contasBrutas:accs||[],alertas:alertas||[]};
+    dadosFinancas={saldoTotal,dividaCartao,statusCiclo,txs:txs||[],contasBrutas:accs||[],alertas:alertas||[],categorias,totalGastoMes};
   }catch(e){
     dadosFinancas=null;
   }
@@ -750,6 +766,25 @@ function renderContent(){
           ${q.extraTotal>0?`<p style="font-size:11px;color:#8B6010;margin-top:6px">+ ${fmtMoeda(q.extraTotal)} de renda extra somados neste ciclo</p>`:""}
         </div>
       </div>`;
+
+      if(df.categorias&&df.categorias.length){
+        h+=sl("Para Onde Foi Meu Dinheiro Este Mês");
+        h+=`<div class="card" style="margin-bottom:14px">
+          <p style="font-size:10px;color:#8B2500;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:4px">Total gasto no mês</p>
+          <p class="serif" style="font-size:24px;font-weight:600;color:#8B2500">${fmtMoeda(df.totalGastoMes)}</p>
+          ${sc&&sc.viver_amount>0?`<p style="font-size:12px;color:#5C4A2A;margin-top:6px">${Math.round(sc.spent_so_far/sc.viver_amount*100)}% do valor disponível pra "viver" neste ciclo (${fmtMoeda(sc.viver_amount)})</p>`:""}
+        </div>`;
+        df.categorias.slice(0,8).forEach(c=>{
+          const pct=df.totalGastoMes>0?Math.round(c.total/df.totalGastoMes*100):0;
+          h+=`<div style="margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+              <span style="font-size:13px;color:#2A1F0E;font-weight:700">${c.nome}</span>
+              <span style="font-size:13px;color:#5C4A2A">${fmtMoeda(c.total)} · ${pct}%</span>
+            </div>
+            <div class="prog-bar" style="width:100%"><div class="prog-fill" style="width:${pct}%"></div></div>
+          </div>`;
+        });
+      }
 
       const cartoes=(df.contasBrutas||[]).filter(a=>a.account_type==="credit_card");
       if(cartoes.length){
