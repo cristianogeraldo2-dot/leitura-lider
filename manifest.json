@@ -1,0 +1,14 @@
+{
+  "name": "Leitura Diária do Líder",
+  "short_name": "Liderança",
+  "description": "Leitura diária, treino e diretor financeiro pessoal.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#FBF4E3",
+  "theme_color": "#FBF4E3",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
