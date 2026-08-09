@@ -294,6 +294,31 @@ function gerarTreino(cfg, diaS){
 // ── ESTADO ───────────────────────────────────────────────────────────────────
 let cfg=null, checks={}, diario={g1:"",g2:"",g3:"",aprendizado:"",melhoria:"",intencao:""};
 let abaAtual="manha", pilarAtivo=-1, diarioSalvo=false;
+let dadosFinancas=null, financasCarregando=false;
+function fmtMoeda(v){return(Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+
+async function carregarFinancas(){
+  financasCarregando=true;
+  if(abaAtual==="financas") renderContent();
+  try{
+    const [{data:accs},{data:ciclos},{data:txs}] = await Promise.all([
+      sb.from('accounts').select('balance,is_active').eq('is_active',true),
+      sb.from('missao_5k_cycles').select('id,start_date').order('start_date',{ascending:false}).limit(1),
+      sb.from('transactions').select('description,merchant_name,amount,date').order('date',{ascending:false}).limit(6),
+    ]);
+    const saldoTotal=(accs||[]).reduce((s,a)=>s+Number(a.balance||0),0);
+    let statusCiclo=null;
+    if(ciclos&&ciclos[0]){
+      const {data:st}=await sb.from('v_missao_5k_status').select('*').eq('cycle_id',ciclos[0].id).maybeSingle();
+      statusCiclo=st;
+    }
+    dadosFinancas={saldoTotal,statusCiclo,txs:txs||[]};
+  }catch(e){
+    dadosFinancas=null;
+  }
+  financasCarregando=false;
+  if(abaAtual==="financas") renderContent();
+}
 const DS=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"], MS=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
 function carregar(){
@@ -439,6 +464,7 @@ function obAvancar(){
     else abaAtual="noite";
     renderApp();
     show("s-app");
+    if(abaAtual==="financas") carregarFinancas();
   }
 }
 
@@ -502,7 +528,10 @@ function renderTabs(){
   ).join("");
 }
 
-function mudaAba(id){abaAtual=id;renderTabs();renderContent();}
+function mudaAba(id){
+  abaAtual=id;renderTabs();renderContent();
+  if(id==="financas"&&!dadosFinancas&&!financasCarregando) carregarFinancas();
+}
 
 function toggleCheck(id){
   checks[id]=!checks[id];
@@ -568,10 +597,50 @@ function renderContent(){
 
   else if(abaAtual==="financas"){
     h+=sl(`Consciência Financeira · ${cfg.trabFim}`);
-    h+=`<p style="font-size:13px;color:#5C4A2A;font-style:italic;margin-bottom:18px;line-height:1.8">"O sábio guarda o que ganha; o insensato desperdiça o que tem." — Pv 21:20</p>`;
-    h+=card("💰","Raio-X do Dia","2 min","Quanto entrou e quanto saiu hoje? Você sabe a resposta agora, sem abrir planilha nenhuma?");
-    h+=card("🎯","Decisão Consciente","Antes de qualquer compra","Isso é necessidade, desejo ou impulso? Toda decisão financeira é uma decisão de liderança sobre você mesmo.");
-    h+=card("📈","Passo da Semana","1 ação","Qual é a ÚNICA coisa que vai te aproximar da sua meta financeira esta semana?");
+    if(financasCarregando){
+      h+=`<div class="card"><p style="font-size:14px;color:#8C7550">Carregando seus dados financeiros…</p></div>`;
+    } else if(!dadosFinancas){
+      h+=`<div class="card"><p style="font-size:14px;color:#8C7550">Não foi possível carregar seus dados agora.</p></div>
+      <button class="save-btn" onclick="carregarFinancas()">🔄 Tentar novamente</button>`;
+    } else {
+      const df=dadosFinancas, sc=df.statusCiclo;
+      const noVermelho=df.saldoTotal<0;
+      const corSaldo=noVermelho?"#8B2500":"#2A5C3A";
+      h+=`<div class="treino-header" style="border-color:${corSaldo}30;background:${corSaldo}08">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <p style="font-size:9px;letter-spacing:2px;color:${corSaldo};text-transform:uppercase;font-weight:700;margin-bottom:6px">Saldo Total</p>
+            <h2 class="serif" style="font-size:30px;font-weight:600;color:${corSaldo}">${fmtMoeda(df.saldoTotal)}</h2>
+          </div>
+          <button onclick="carregarFinancas()" style="background:none;border:1px solid #D9CCB0;border-radius:8px;padding:5px 9px;cursor:pointer;font-size:13px;color:#8C7550">🔄</button>
+        </div></div>`;
+
+      if(sc){
+        const foraDoCiclo=sc.viver_remaining<0;
+        h+=card("🎯","Missão do Ciclo Atual",`${sc.days_remaining} dias restantes`,
+          `Você pode gastar até <strong>${fmtMoeda(sc.suggested_daily_limit)}</strong> por dia para fechar o ciclo no azul. Já gasto no ciclo: ${fmtMoeda(sc.spent_so_far)}.`);
+        if(foraDoCiclo){
+          h+=`<div class="red-box">
+            <p style="font-size:9px;letter-spacing:2px;color:#8B2500;text-transform:uppercase;margin-bottom:8px;font-weight:700">⚠️ Plano de Ação — Sair do Vermelho</p>
+            <p style="font-size:14px;color:#5C4A2A;line-height:1.8;margin-bottom:10px">Você já ultrapassou em <strong>${fmtMoeda(Math.abs(sc.viver_remaining))}</strong> o valor disponível pra "viver" neste ciclo.</p>
+            <p style="font-size:14px;color:#5C4A2A;line-height:1.9">1. Corte qualquer gasto não essencial pelos próximos ${sc.days_remaining} dias.<br>2. Revise as categorias com mais gasto esta semana e corte a maior.<br>3. Nenhuma compra por impulso até o saldo virar.<br>4. Separe hoje mesmo o valor da reserva antes de gastar o resto.</p>
+          </div>`;
+        }
+      }
+
+      if(df.txs.length){
+        h+=sl("Últimos Lançamentos");
+        h+=`<div class="treino-table">`;
+        df.txs.forEach((t,i)=>{
+          const cor=Number(t.amount)<0?"#8B2500":"#2A5C3A";
+          h+=`<div class="treino-td ${i%2?"alt":""}" style="grid-template-columns:1fr 100px">
+            <span style="font-size:13px;color:#2A1F0E">${t.merchant_name||t.description||"—"}</span>
+            <span style="font-size:13px;color:${cor};font-weight:700;text-align:right">${fmtMoeda(t.amount)}</span>
+          </div>`;
+        });
+        h+=`</div>`;
+      }
+    }
     h+=sl("Check · Finanças");
     CHF.forEach((txt,i)=>h+=chkItem(`c${p.chM.length+p.chT.length+i}`,txt));
     h+=pbox("Pergunta Financeira","Meu dinheiro está me servindo, ou eu estou servindo ao dinheiro?");
@@ -835,6 +904,7 @@ function iniciarApp(){
     else abaAtual="noite";
     renderApp();
     show("s-app");
+    if(abaAtual==="financas") carregarFinancas();
   } else {
     obRender();
     show("s-ob");
