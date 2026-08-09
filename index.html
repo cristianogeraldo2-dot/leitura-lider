@@ -378,6 +378,26 @@ function calcularScore(totalDivida,saldoTotal,sc){
   return {score,scoreDivida:Math.round(scoreDivida),scorePatrimonio:Math.round(scorePatrimonio),scoreRitmo:Math.round(scoreRitmo)};
 }
 
+// Projeção linear: assume renda e ritmo de quitação constantes, sem juros novos nem dívida nova.
+function calcularFluxoProjetado(patrimonioAtual,totalDivida,cronograma,valorMensal,renda){
+  const marcos=[{m:1,label:"30 dias"},{m:2,label:"60 dias"},{m:3,label:"90 dias"},{m:6,label:"6 meses"},{m:12,label:"12 meses"},{m:24,label:"24 meses"}];
+  const banda=renda?renda*0.2:1000;
+  return marcos.map(({m,label})=>{
+    let pago=0;
+    for(let i=0;i<Math.min(m,cronograma.length);i++){
+      pago+=Object.values(cronograma[i].pagamentos).reduce((s,v)=>s+v,0);
+    }
+    pago=Math.min(pago,totalDivida);
+    const mesesLivre=Math.max(0,m-cronograma.length);
+    const patrimonio=Math.round((patrimonioAtual+pago+mesesLivre*valorMensal)*100)/100;
+    let status,cor;
+    if(patrimonio<0){status="Déficit";cor="#8B2500";}
+    else if(patrimonio<banda){status="Equilíbrio";cor="#8B6010";}
+    else{status="Superávit";cor="#2A5C3A";}
+    return {label,patrimonio,status,cor};
+  });
+}
+
 async function carregarFinancas(){
   financasCarregando=true;
   if(abaAtual==="financas") renderContent();
@@ -814,6 +834,22 @@ function renderContent(){
             <div class="prog-bar" style="width:100%"><div class="prog-fill" style="width:${pct}%"></div></div>
           </div>`;
         });
+      }
+
+      if(sc&&sc.monthly_income){
+        h+=sl("Fluxo de Caixa Projetado");
+        h+=`<p style="font-size:12px;color:#8C7550;line-height:1.6;margin-bottom:10px">Situação equilibrada em <strong style="color:#2A1F0E">${q.mesesRestantes} ${q.mesesRestantes===1?"mês":"meses"}</strong>, mantendo renda e ritmo de pagamento atuais (sem dívida nova, sem juros extra).</p>`;
+        const fluxo=calcularFluxoProjetado(df.saldoTotal,q.totalDivida,q.cronograma,planoDivida.valorMensal,sc.monthly_income);
+        h+=`<div class="treino-table">`;
+        fluxo.forEach((f,i)=>{
+          h+=`<div class="treino-td ${i%2?"alt":""}" style="grid-template-columns:1fr 110px 90px">
+            <span style="font-size:13px;color:#2A1F0E">${f.label}</span>
+            <span style="font-size:13px;color:#5C4A2A;font-weight:700;text-align:center">${fmtMoeda(f.patrimonio)}</span>
+            <span style="font-size:11px;color:${f.cor};font-weight:700;text-align:right">${f.status}</span>
+          </div>`;
+        });
+        h+=`</div>`;
+        h+=`<p style="font-size:10px;color:#8C7550;margin-top:8px;margin-bottom:16px">Projeção linear: assume mesma renda e ritmo de pagamento, sem dívida nova nem juros extra além do já embutido no cronograma.</p>`;
       }
 
       const cartoes=(df.contasBrutas||[]).filter(a=>a.account_type==="credit_card");
