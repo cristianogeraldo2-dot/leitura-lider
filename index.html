@@ -325,7 +325,7 @@ function adicionarRendaExtra(){
 }
 
 // Snowball: cheque especial primeiro (juro mais alto quase sempre no Brasil), depois cartões do menor pro maior.
-function calcularQuitacao(contas,valorMensal){
+function calcularQuitacao(contas,valorMensal,extraOverride){
   const dividas=[];
   (contas||[]).forEach(a=>{
     const bal=Number(a.balance||0);
@@ -341,7 +341,7 @@ function calcularQuitacao(contas,valorMensal){
     return a.valor-b.valor;
   });
   const totalDivida=dividas.reduce((s,d)=>s+d.valor,0);
-  const extraTotal=(planoDivida.extras||[]).reduce((s,e)=>s+Number(e.valor||0),0);
+  const extraTotal=extraOverride!==undefined?extraOverride:(planoDivida.extras||[]).reduce((s,e)=>s+Number(e.valor||0),0);
   const bucket=dividas.map(d=>({...d}));
   const hoje=new Date(), cronograma=[];
   let totalRestante=totalDivida, poolMes=valorMensal+extraTotal, mesesRestantes=0;
@@ -396,6 +396,23 @@ function calcularFluxoProjetado(patrimonioAtual,totalDivida,cronograma,valorMens
     else{status="Superávit";cor="#2A5C3A";}
     return {label,patrimonio,status,cor};
   });
+}
+
+let simResultado=null;
+function simular(sinal){
+  const el=document.getElementById("f-simulador");
+  const n=parseFloat(String(el&&el.value||"").replace(",","."));
+  if(isNaN(n)||n<=0||!dadosFinancas){ simResultado=null; renderContent(); return; }
+  const q0=calcularQuitacao(dadosFinancas.contasBrutas,planoDivida.valorMensal);
+  const extraAjustado=q0.extraTotal+(sinal*n);
+  const q1=calcularQuitacao(dadosFinancas.contasBrutas,planoDivida.valorMensal,extraAjustado);
+  simResultado={
+    valor:n,
+    tipo:sinal>0?"renda":"gasto",
+    mesesAntes:q0.mesesRestantes,
+    mesesDepois:q1.mesesRestantes,
+  };
+  renderContent();
 }
 
 async function carregarFinancas(){
@@ -851,6 +868,21 @@ function renderContent(){
         h+=`</div>`;
         h+=`<p style="font-size:10px;color:#8C7550;margin-top:8px;margin-bottom:16px">Projeção linear: assume mesma renda e ritmo de pagamento, sem dívida nova nem juros extra além do já embutido no cronograma.</p>`;
       }
+
+      h+=sl("Simulador — E Se?");
+      h+=`<div class="card" style="margin-bottom:16px">
+        <div class="field-wrap" style="margin-bottom:10px">
+          <div class="field-label">Valor da simulação</div>
+          <input type="text" inputmode="decimal" id="f-simulador" placeholder="Ex: 1000"/>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-back" style="flex:1" onclick="simular(-1)">💸 Se eu gastar isso agora</button>
+          <button class="btn-back" style="flex:1" onclick="simular(1)">💰 Se essa for renda extra</button>
+        </div>
+        ${simResultado?`<div style="margin-top:14px;padding-top:14px;border-top:1px solid #D9CCB0">
+          <p style="font-size:14px;color:#5C4A2A;line-height:1.8">${simResultado.tipo==="gasto"?`Gastando ${fmtMoeda(simResultado.valor)} agora`:`Com ${fmtMoeda(simResultado.valor)} de renda extra`}, você ficaria livre de dívida em <strong style="color:${simResultado.mesesDepois>simResultado.mesesAntes?"#8B2500":"#2A5C3A"}">${simResultado.mesesDepois} ${simResultado.mesesDepois===1?"mês":"meses"}</strong> em vez de ${simResultado.mesesAntes} ${simResultado.mesesAntes===1?"mês":"meses"} — ${simResultado.mesesDepois===simResultado.mesesAntes?"sem mudar o prazo":simResultado.mesesDepois>simResultado.mesesAntes?`${simResultado.mesesDepois-simResultado.mesesAntes} mês(es) a mais`:`${simResultado.mesesAntes-simResultado.mesesDepois} mês(es) a menos`}.</p>
+        </div>`:""}
+      </div>`;
 
       const cartoes=(df.contasBrutas||[]).filter(a=>a.account_type==="credit_card");
       if(cartoes.length){
