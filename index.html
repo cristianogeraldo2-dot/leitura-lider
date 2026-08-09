@@ -153,6 +153,7 @@ const PILARES = [
   {nome:"Amigos",cor:"#8B4A00",desc:"Reconheça 1 pessoa — conexão gera lealdade"},
   {nome:"Finanças",cor:"#4A6B1A",desc:"2 min de consciência financeira diária"},
 ];
+const CHF=["Sei quanto tenho disponível hoje","Registrei os principais gastos do dia","Não fiz nenhuma compra por impulso","Separei ou revisei algo para poupança/investimento"];
 const PERFIS = {
   lider:{nome:"Líder / Gestor",ic:"🏆",cor:"#1A3A6B",
     pM:"Que tipo de líder meu time vai ver hoje?",
@@ -421,7 +422,8 @@ function obAvancar(){
     const h=new Date().getHours(), ph=s=>parseInt(s.split(":")[0]);
     if(h>=ph(cfg.acordar)&&h<ph(cfg.trabInicio)) abaAtual="manha";
     else if(h>=ph(cfg.trabInicio)&&h<ph(cfg.trabFim)) abaAtual="trab";
-    else if(h>=ph(cfg.trabFim)&&h<ph(cfg.academiaHora)) abaAtual="fam";
+    else if(h>=ph(cfg.trabFim)&&h<ph(cfg.trabFim)+1) abaAtual="financas";
+    else if(h>=ph(cfg.trabFim)+1&&h<ph(cfg.academiaHora)) abaAtual="fam";
     else if(h>=ph(cfg.academiaHora)&&h<ph(cfg.academiaHora)+1) abaAtual="treino";
     else abaAtual="noite";
     renderApp();
@@ -438,7 +440,7 @@ function renderApp(){
 
 function renderHeader(){
   const hoje=new Date(), dia=hoje.getDate(), p=PERFIS[cfg.perfil]||PERFIS.lider;
-  const allK=[...p.chM,...p.chT,...p.chN].map((_,i)=>`c${i}`);
+  const allK=[...p.chM,...p.chT,...CHF,...p.chN].map((_,i)=>`c${i}`);
   const pct=Math.round(allK.filter(k=>checks[k]).length/allK.length*100);
   const frase=FRASES[dia%FRASES.length];
   document.getElementById("app-header").innerHTML=`
@@ -475,6 +477,7 @@ function renderTabs(){
   const tabs=[
     {id:"manha",ic:"🌅",lb:"Manhã",hr:cfg.acordar.slice(0,5)},
     {id:"trab",ic:"💼",lb:"Trabalho",hr:cfg.trabInicio.slice(0,5)},
+    {id:"financas",ic:"💰",lb:"Finanças",hr:cfg.trabFim.slice(0,5)},
     {id:"fam",ic:"🏠",lb:cfg.familiaLabel,hr:cfg.trabFim.slice(0,5)},
     {id:"treino",ic:"🏋️",lb:cfg.treinoLabel,hr:cfg.academiaHora.slice(0,5)},
     {id:"noite",ic:"🌙",lb:"Noite",hr:"21h+"},
@@ -550,6 +553,17 @@ function renderContent(){
         <p class="serif" style="font-size:17px;font-style:italic;color:#2A1F0E;line-height:1.7">"${ensino.acao}"</p>
       </div></div>`;
     h+=pbox("Pergunta da Tarde",p.pT);
+  }
+
+  else if(abaAtual==="financas"){
+    h+=sl(`Consciência Financeira · ${cfg.trabFim}`);
+    h+=`<p style="font-size:13px;color:#5C4A2A;font-style:italic;margin-bottom:18px;line-height:1.8">"O sábio guarda o que ganha; o insensato desperdiça o que tem." — Pv 21:20</p>`;
+    h+=card("💰","Raio-X do Dia","2 min","Quanto entrou e quanto saiu hoje? Você sabe a resposta agora, sem abrir planilha nenhuma?");
+    h+=card("🎯","Decisão Consciente","Antes de qualquer compra","Isso é necessidade, desejo ou impulso? Toda decisão financeira é uma decisão de liderança sobre você mesmo.");
+    h+=card("📈","Passo da Semana","1 ação","Qual é a ÚNICA coisa que vai te aproximar da sua meta financeira esta semana?");
+    h+=sl("Check · Finanças");
+    CHF.forEach((txt,i)=>h+=chkItem(`c${p.chM.length+p.chT.length+i}`,txt));
+    h+=pbox("Pergunta Financeira","Meu dinheiro está me servindo, ou eu estou servindo ao dinheiro?");
   }
 
   else if(abaAtual==="fam"){
@@ -670,7 +684,7 @@ function renderContent(){
     }
 
     h+=sl("Check · Noite");
-    p.chN.forEach((txt,i)=>h+=chkItem(`c${p.chM.length+p.chT.length+i}`,txt));
+    p.chN.forEach((txt,i)=>h+=chkItem(`c${p.chM.length+p.chT.length+CHF.length+i}`,txt));
 
     h+=sl("8 Pilares · Radar Semanal");
     h+=`<div class="pilar-grid">`;
@@ -763,7 +777,8 @@ if(cfg){
   const h=new Date().getHours(), ph=s=>parseInt(s.split(":")[0]);
   if(h>=ph(cfg.acordar)&&h<ph(cfg.trabInicio)) abaAtual="manha";
   else if(h>=ph(cfg.trabInicio)&&h<ph(cfg.trabFim)) abaAtual="trab";
-  else if(h>=ph(cfg.trabFim)&&h<ph(cfg.academiaHora)) abaAtual="fam";
+  else if(h>=ph(cfg.trabFim)&&h<ph(cfg.trabFim)+1) abaAtual="financas";
+  else if(h>=ph(cfg.trabFim)+1&&h<ph(cfg.academiaHora)) abaAtual="fam";
   else if(h>=ph(cfg.academiaHora)&&h<ph(cfg.academiaHora)+1) abaAtual="treino";
   else abaAtual="noite";
   renderApp();
