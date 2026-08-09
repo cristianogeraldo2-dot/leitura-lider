@@ -365,6 +365,19 @@ function calcularQuitacao(contas,valorMensal){
   return {dividas,totalDivida,extraTotal,mesesRestantes,dividaAtual:dividas.length?dividas[0]:null,cronograma};
 }
 
+// Score 0-100: 40% endividamento (dívida/renda), 35% patrimônio (saldo/renda), 25% ritmo de gasto no ciclo.
+// Não considera uso de limite de cartão porque essa informação não é sincronizada do Pluggy (regra: não inventar dado).
+function calcularScore(totalDivida,saldoTotal,sc){
+  if(!sc||!sc.monthly_income) return null;
+  const renda=sc.monthly_income;
+  const scoreDivida=Math.max(0,Math.min(100,100-(totalDivida/renda)*20));
+  const scorePatrimonio=Math.max(0,Math.min(100,100+(saldoTotal/renda)*50));
+  let scoreRitmo=100;
+  if(sc.viver_amount>0) scoreRitmo=Math.max(0,Math.min(100,100-(sc.spent_so_far/sc.viver_amount)*100));
+  const score=Math.round(scoreDivida*0.4+scorePatrimonio*0.35+scoreRitmo*0.25);
+  return {score,scoreDivida:Math.round(scoreDivida),scorePatrimonio:Math.round(scorePatrimonio),scoreRitmo:Math.round(scoreRitmo)};
+}
+
 async function carregarFinancas(){
   financasCarregando=true;
   if(abaAtual==="financas") renderContent();
@@ -715,6 +728,24 @@ function renderContent(){
           <button onclick="carregarFinancas()" style="background:none;border:1px solid #D9CCB0;border-radius:8px;padding:5px 9px;cursor:pointer;font-size:13px;color:#8C7550">🔄</button>
         </div></div>`;
 
+      const q=calcularQuitacao(df.contasBrutas,planoDivida.valorMensal);
+      const scoreObj=calcularScore(q.totalDivida,df.saldoTotal,sc);
+      if(scoreObj){
+        const corScore=scoreObj.score>=70?"#2A5C3A":scoreObj.score>=40?"#8B6010":"#8B2500";
+        h+=`<div class="card" style="margin-bottom:16px;text-align:center">
+          <p style="font-size:9px;letter-spacing:2px;color:${corScore};text-transform:uppercase;font-weight:700;margin-bottom:8px">Financial Health Score</p>
+          <p class="serif" style="font-size:44px;font-weight:600;color:${corScore};line-height:1">${scoreObj.score}<span style="font-size:18px;color:#8C7550">/100</span></p>
+          <div style="display:flex;justify-content:center;gap:18px;margin-top:12px">
+            <div><p style="font-size:16px;font-weight:700;color:#2A1F0E">${scoreObj.scoreDivida}</p><p style="font-size:9px;color:#8C7550;text-transform:uppercase">Dívida</p></div>
+            <div><p style="font-size:16px;font-weight:700;color:#2A1F0E">${scoreObj.scorePatrimonio}</p><p style="font-size:9px;color:#8C7550;text-transform:uppercase">Patrimônio</p></div>
+            <div><p style="font-size:16px;font-weight:700;color:#2A1F0E">${scoreObj.scoreRitmo}</p><p style="font-size:9px;color:#8C7550;text-transform:uppercase">Ritmo</p></div>
+          </div>
+          <p style="font-size:10px;color:#8C7550;margin-top:10px">Não considera uso de limite de cartão (dado não sincronizado ainda)</p>
+        </div>`;
+      } else {
+        h+=`<div class="card" style="margin-bottom:16px"><p style="font-size:13px;color:#8C7550">Financial Health Score indisponível — falta configurar a renda mensal (missao_5k_cycles/income_config).</p></div>`;
+      }
+
       if(df.alertas&&df.alertas.length){
         h+=sl("Alertas do CFO");
         const corSev={alta:"#8B2500",high:"#8B2500",media:"#8B6010",medium:"#8B6010",baixa:"#5C4A2A",low:"#5C4A2A"};
@@ -733,7 +764,6 @@ function renderContent(){
         });
       }
 
-      const q=calcularQuitacao(df.contasBrutas,planoDivida.valorMensal);
       h+=`<div class="ensino-box" style="margin-bottom:16px">
         <span class="tag">Agente Financeiro</span>
         <h3 class="serif" style="font-size:20px;font-weight:600;margin-bottom:12px;color:#2A1F0E">Informe Diário</h3>
