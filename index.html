@@ -369,10 +369,11 @@ async function carregarFinancas(){
   financasCarregando=true;
   if(abaAtual==="financas") renderContent();
   try{
-    const [{data:accs},{data:ciclos},{data:txs}] = await Promise.all([
+    const [{data:accs},{data:ciclos},{data:txs},{data:alertas}] = await Promise.all([
       sb.from('accounts').select('balance,account_type,is_active,name,institution_label,masked_number').eq('is_active',true),
       sb.from('missao_5k_cycles').select('id,start_date').order('start_date',{ascending:false}).limit(1),
       sb.from('transactions').select('description,merchant_name,amount,date').order('date',{ascending:false}).limit(6),
+      sb.from('alerts').select('id,type,severity,title,message,created_at').is('dismissed_at',null).order('created_at',{ascending:false}).limit(8),
     ]);
     const ehPassivo=t=>t==="credit_card"||t==="loan"||t==="financing";
     // Cartão/empréstimo: o "balance" é o quanto você DEVE, então entra negativo no patrimônio.
@@ -386,13 +387,20 @@ async function carregarFinancas(){
       const {data:st}=await sb.from('v_missao_5k_status').select('*').eq('cycle_id',ciclos[0].id).maybeSingle();
       statusCiclo=st;
     }
-    dadosFinancas={saldoTotal,dividaCartao,statusCiclo,txs:txs||[],contasBrutas:accs||[]};
+    dadosFinancas={saldoTotal,dividaCartao,statusCiclo,txs:txs||[],contasBrutas:accs||[],alertas:alertas||[]};
   }catch(e){
     dadosFinancas=null;
   }
   financasCarregando=false;
   if(abaAtual==="financas") renderContent();
 }
+
+async function dispensarAlerta(id){
+  if(dadosFinancas) dadosFinancas.alertas=(dadosFinancas.alertas||[]).filter(a=>a.id!==id);
+  renderContent();
+  try{ await sb.from('alerts').update({dismissed_at:new Date().toISOString()}).eq('id',id); }catch(e){}
+}
+
 const DS=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"], MS=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
 function carregar(){
@@ -690,6 +698,24 @@ function renderContent(){
           </div>
           <button onclick="carregarFinancas()" style="background:none;border:1px solid #D9CCB0;border-radius:8px;padding:5px 9px;cursor:pointer;font-size:13px;color:#8C7550">🔄</button>
         </div></div>`;
+
+      if(df.alertas&&df.alertas.length){
+        h+=sl("Alertas do CFO");
+        const corSev={alta:"#8B2500",high:"#8B2500",media:"#8B6010",medium:"#8B6010",baixa:"#5C4A2A",low:"#5C4A2A"};
+        df.alertas.forEach(a=>{
+          const cor=corSev[(a.severity||"").toLowerCase()]||"#8B6010";
+          h+=`<div class="card" style="border-left:3px solid ${cor};margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+              <div>
+                <p style="font-size:9px;letter-spacing:1.5px;color:${cor};text-transform:uppercase;font-weight:700;margin-bottom:4px">${a.severity||a.type||"Alerta"}</p>
+                <p style="font-size:14px;color:#2A1F0E;font-weight:700;margin-bottom:2px">${a.title||""}</p>
+                <p style="font-size:13px;color:#5C4A2A;line-height:1.6">${a.message||""}</p>
+              </div>
+              <button onclick="dispensarAlerta('${a.id}')" style="background:none;border:1px solid #D9CCB0;border-radius:8px;padding:4px 8px;cursor:pointer;font-size:12px;color:#8C7550;flex-shrink:0">✕</button>
+            </div>
+          </div>`;
+        });
+      }
 
       const q=calcularQuitacao(df.contasBrutas,planoDivida.valorMensal);
       h+=`<div class="ensino-box" style="margin-bottom:16px">
