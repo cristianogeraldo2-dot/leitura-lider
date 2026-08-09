@@ -415,6 +415,30 @@ function simular(sinal){
   renderContent();
 }
 
+function gerarPlanoAcao(q,df,sc,scoreObj){
+  const acoes=[];
+  if(q.dividaAtual){
+    acoes.push({titulo:`Pagar ${q.dividaAtual.nome}`,detalhe:`Foco total aqui — ${fmtMoeda(q.dividaAtual.valor)} restantes. Nenhuma compra nova nesse cartão até quitar.`,prioridade:"alta"});
+  }
+  if(df.categorias&&df.categorias.length){
+    const top=df.categorias[0];
+    const pct=df.totalGastoMes>0?Math.round(top.total/df.totalGastoMes*100):0;
+    if(pct>=30) acoes.push({titulo:`Reduzir gastos em ${top.nome}`,detalhe:`Já representa ${pct}% de tudo que você gastou este mês (${fmtMoeda(top.total)}). Corte pelo menos 20% aqui.`,prioridade:"alta"});
+  }
+  if(scoreObj&&scoreObj.scoreRitmo<50&&sc){
+    acoes.push({titulo:"Frear o ritmo de gastos do ciclo",detalhe:`Você já gastou ${fmtMoeda(sc.spent_so_far)} de ${fmtMoeda(sc.viver_amount)} disponíveis, com ${sc.days_remaining} dias restantes no ciclo.`,prioridade:"alta"});
+  }
+  (df.alertas||[]).filter(a=>(a.severity||"").toLowerCase()==="alta"||(a.severity||"").toLowerCase()==="high").forEach(a=>{
+    acoes.push({titulo:`Resolver alerta: ${a.title||a.type}`,detalhe:a.message||"",prioridade:"alta"});
+  });
+  if(q.mesesRestantes>0){
+    acoes.push({titulo:"Evitar qualquer compra parcelada nova",detalhe:`Cada parcela nova atrasa a saída do vermelho, prevista pra daqui a ${q.mesesRestantes} ${q.mesesRestantes===1?"mês":"meses"}.`,prioridade:"media"});
+  }
+  acoes.push({titulo:"Separar reserva assim que a dívida atual zerar",detalhe:q.dividas.length>1?`Depois de quitar ${q.dividaAtual?q.dividaAtual.nome:"a dívida atual"}, redirecione o valor mensal pra reserva antes de gastar mais.`:"Assim que ficar livre de dívida, comece a reserva no mesmo mês.",prioridade:"baixa"});
+  const ordem={alta:0,media:1,baixa:2};
+  return acoes.sort((a,b)=>ordem[a.prioridade]-ordem[b.prioridade]).slice(0,5);
+}
+
 async function carregarFinancas(){
   financasCarregando=true;
   if(abaAtual==="financas") renderContent();
@@ -799,6 +823,25 @@ function renderContent(){
             </div>
           </div>`;
         });
+      }
+
+      const planoAcao=gerarPlanoAcao(q,df,sc,scoreObj);
+      if(planoAcao.length){
+        h+=sl("Plano de Ação — Prioridades");
+        const corPrio={alta:"#8B2500",media:"#8B6010",baixa:"#5C4A2A"};
+        h+=`<div class="card" style="margin-bottom:16px">`;
+        planoAcao.forEach((a,i)=>{
+          h+=`<div style="padding:${i?"12px 0":"0 0 12px"};${i?"border-top:1px solid #D9CCB0":""}">
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <span style="font-size:13px;font-weight:700;color:${corPrio[a.prioridade]};min-width:18px">${i+1}.</span>
+              <div>
+                <p style="font-size:14px;color:#2A1F0E;font-weight:700">${a.titulo}</p>
+                <p style="font-size:12px;color:#5C4A2A;line-height:1.6;margin-top:3px">${a.detalhe}</p>
+              </div>
+            </div>
+          </div>`;
+        });
+        h+=`</div>`;
       }
 
       h+=`<div class="ensino-box" style="margin-bottom:16px">
