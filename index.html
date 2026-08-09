@@ -112,8 +112,13 @@ textarea:focus,textarea.filled{border-color:#8B6010;}
 </head>
 <body>
 
+<!-- TELA: LOGIN -->
+<div id="s-auth" class="screen active">
+<div class="ob-wrap" id="auth-wrap"></div>
+</div>
+
 <!-- TELA: ONBOARDING -->
-<div id="s-ob" class="screen active">
+<div id="s-ob" class="screen">
 <div class="ob-wrap" id="ob-wrap"></div>
 </div>
 
@@ -131,7 +136,13 @@ textarea:focus,textarea.filled{border-color:#8B6010;}
 <div class="conf-screen" id="conf-screen"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
+// ── SUPABASE ─────────────────────────────────────────────────────────────────
+const SUPABASE_URL="https://rzafiraelxjnrijmwurw.supabase.co";
+const SUPABASE_KEY="sb_publishable_7aOZ2H0qyV8WM32TQf7UIA_xAixtyfR";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
 // ── DADOS ────────────────────────────────────────────────────────────────────
 const FRASES = [
   {t:"Metas levam a um lugar. Missão define um destino.",f:"DNA Alta Performance"},
@@ -692,7 +703,7 @@ function renderContent(){
       const at=pilarAtivo===i;
       h+=`<div class="pilar-card ${at?"active":""}" onclick="togglePilar(${i})" style="${at?`border-color:${pl.cor}60;background:${pl.cor}10`:""}">
         <div class="pilar-dot" style="background:${pl.cor}"></div>
-        <div class="pilar-name" style="${at?`color:${pl.cor}`""}">${pl.nome}</div>
+        <div class="pilar-name" style="${at?`color:${pl.cor}`:""}">${pl.nome}</div>
         <div class="pilar-desc">${pl.desc}</div>
       </div>`;
     });
@@ -759,7 +770,8 @@ function showConf(){
       ["Trabalho",`${cfg.trabInicio} → ${cfg.trabFim}`],
       [cfg.treinoLabel,cfg.academiaHora],
     ].map(([l,v])=>`<div class="conf-row"><span style="font-size:13px;color:#5C4A2A">${l}</span><span style="font-size:14px;font-weight:700;color:#8B6010">${v}</span></div>`).join("")}
-    <button class="reset-btn" onclick="resetar()">Reconfigurar do zero</button>`;
+    <button class="reset-btn" onclick="resetar()">Reconfigurar do zero</button>
+    <button class="reset-btn" style="margin-top:10px" onclick="authLogout()">Sair da conta</button>`;
   show("s-conf");
 }
 
@@ -771,22 +783,69 @@ function resetar(){
   show("s-ob");
 }
 
-// ── INIT ─────────────────────────────────────────────────────────────────────
-carregar();
-if(cfg){
-  const h=new Date().getHours(), ph=s=>parseInt(s.split(":")[0]);
-  if(h>=ph(cfg.acordar)&&h<ph(cfg.trabInicio)) abaAtual="manha";
-  else if(h>=ph(cfg.trabInicio)&&h<ph(cfg.trabFim)) abaAtual="trab";
-  else if(h>=ph(cfg.trabFim)&&h<ph(cfg.trabFim)+1) abaAtual="financas";
-  else if(h>=ph(cfg.trabFim)+1&&h<ph(cfg.academiaHora)) abaAtual="fam";
-  else if(h>=ph(cfg.academiaHora)&&h<ph(cfg.academiaHora)+1) abaAtual="treino";
-  else abaAtual="noite";
-  renderApp();
-  show("s-app");
-} else {
-  obRender();
-  show("s-ob");
+// ── AUTENTICAÇÃO ─────────────────────────────────────────────────────────────
+let authMode="login", authErro="", authCarregando=false;
+
+function authRender(){
+  const w=document.getElementById("auth-wrap");
+  let h=`<div style="text-align:center;padding:40px 0 24px">
+    <div style="font-size:48px;margin-bottom:12px">🔐</div>
+    <h1 class="serif" style="font-size:28px;font-weight:400;color:#2A1F0E;margin-bottom:6px">${authMode==="login"?"Entrar":"Criar conta"}</h1>
+    <p style="font-size:13px;color:#8C7550">Acesse sua Leitura Diária do Líder</p>
+  </div>`;
+  if(authErro) h+=`<div class="red-box" style="margin-bottom:16px;margin-top:0"><p style="font-size:13px;color:#8B2500">${authErro}</p></div>`;
+  h+=`<div class="field-wrap"><div class="field-label">Email</div><input type="text" id="auth-email" placeholder="voce@email.com" autocomplete="email"/></div>
+  <div class="field-wrap"><div class="field-label">Senha</div><input type="password" id="auth-senha" placeholder="••••••••" autocomplete="${authMode==="login"?"current-password":"new-password"}"/></div>
+  <button class="btn-next" style="width:100%" onclick="authSubmit()" ${authCarregando?"disabled":""}>${authCarregando?"Aguarde...":authMode==="login"?"Entrar":"Criar conta"}</button>
+  <p style="text-align:center;font-size:13px;color:#8C7550;margin-top:16px;cursor:pointer" onclick="authToggle()">${authMode==="login"?"Não tem conta? Criar conta":"Já tem conta? Entrar"}</p>`;
+  w.innerHTML=h;
 }
+
+function authToggle(){authMode=authMode==="login"?"cadastro":"login";authErro="";authRender();}
+
+async function authSubmit(){
+  const email=(document.getElementById("auth-email").value||"").trim();
+  const senha=document.getElementById("auth-senha").value||"";
+  if(!email||!senha){authErro="Preencha email e senha.";authRender();return;}
+  authErro="";authCarregando=true;authRender();
+  const {error} = authMode==="login"
+    ? await sb.auth.signInWithPassword({email,password:senha})
+    : await sb.auth.signUp({email,password:senha});
+  authCarregando=false;
+  if(error){authErro=error.message;authRender();return;}
+  if(authMode==="cadastro"){
+    authErro="Conta criada! Verifique seu email para confirmar e depois faça login.";
+    authMode="login";
+    authRender();
+  }
+  // login bem-sucedido: onAuthStateChange assume o resto
+}
+
+function authLogout(){sb.auth.signOut();}
+
+function iniciarApp(){
+  carregar();
+  if(cfg){
+    const h=new Date().getHours(), ph=s=>parseInt(s.split(":")[0]);
+    if(h>=ph(cfg.acordar)&&h<ph(cfg.trabInicio)) abaAtual="manha";
+    else if(h>=ph(cfg.trabInicio)&&h<ph(cfg.trabFim)) abaAtual="trab";
+    else if(h>=ph(cfg.trabFim)&&h<ph(cfg.trabFim)+1) abaAtual="financas";
+    else if(h>=ph(cfg.trabFim)+1&&h<ph(cfg.academiaHora)) abaAtual="fam";
+    else if(h>=ph(cfg.academiaHora)&&h<ph(cfg.academiaHora)+1) abaAtual="treino";
+    else abaAtual="noite";
+    renderApp();
+    show("s-app");
+  } else {
+    obRender();
+    show("s-ob");
+  }
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+sb.auth.onAuthStateChange((event,session)=>{
+  if(session) iniciarApp();
+  else { authMode="login";authErro="";authCarregando=false; authRender(); show("s-auth"); }
+});
 </script>
 </body>
 </html>
