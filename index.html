@@ -343,20 +343,26 @@ function calcularQuitacao(contas,valorMensal){
   const totalDivida=dividas.reduce((s,d)=>s+d.valor,0);
   const extraTotal=(planoDivida.extras||[]).reduce((s,e)=>s+Number(e.valor||0),0);
   const bucket=dividas.map(d=>({...d}));
+  const hoje=new Date(), cronograma=[];
   let totalRestante=totalDivida, poolMes=valorMensal+extraTotal, mesesRestantes=0;
   while(totalRestante>0&&mesesRestantes<120){
-    mesesRestantes++;
+    const dataM=new Date(hoje.getFullYear(),hoje.getMonth()+mesesRestantes,1);
+    const label=`${MS[dataM.getMonth()]}/${String(dataM.getFullYear()).slice(2)}`;
+    const pagamentos={};
     let sobra=poolMes;
     for(let i=0;i<bucket.length&&sobra>0;i++){
       if(bucket[i].valor<=0) continue;
       const pag=Math.min(bucket[i].valor,sobra);
+      if(pag>0) pagamentos[bucket[i].nome]=pag;
       bucket[i].valor-=pag; sobra-=pag;
     }
+    cronograma.push({label,pagamentos});
+    mesesRestantes++;
     totalRestante=bucket.reduce((s,d)=>s+Math.max(d.valor,0),0);
     poolMes=valorMensal;
     if(valorMensal<=0) break;
   }
-  return {dividas,totalDivida,extraTotal,mesesRestantes,dividaAtual:dividas.length?dividas[0]:null};
+  return {dividas,totalDivida,extraTotal,mesesRestantes,dividaAtual:dividas.length?dividas[0]:null,cronograma};
 }
 
 async function carregarFinancas(){
@@ -693,10 +699,16 @@ function renderContent(){
           <p style="font-size:14px;color:#5C4A2A;line-height:1.8;margin-bottom:6px">Dívida total agora: <strong style="color:#8B2500">${fmtMoeda(q.totalDivida)}</strong></p>
           <p style="font-size:14px;color:#5C4A2A;line-height:1.8;margin-bottom:14px">Atacando agora: <strong>${q.dividaAtual?q.dividaAtual.nome:"—"}</strong> (${q.dividaAtual?fmtMoeda(q.dividaAtual.valor):""}) · No ritmo atual, livre de dívida em <strong>${q.mesesRestantes} ${q.mesesRestantes===1?"mês":"meses"}</strong>.</p>
           <div style="background:#F3EAD0;border-radius:10px;padding:2px 0;margin-bottom:14px">
-            ${q.dividas.map((d,i)=>`<div style="display:flex;justify-content:space-between;padding:9px 14px;${i?"border-top:1px solid #D9CCB0":""}">
-              <span style="font-size:13px;color:${i===0?"#8B6010":"#5C4A2A"};font-weight:${i===0?700:400}">${i===0?"▶ ":""}${d.nome}</span>
-              <span style="font-size:13px;color:#5C4A2A;font-weight:700">${fmtMoeda(d.valor)}</span>
-            </div>`).join("")}
+            ${q.dividas.map((d,i)=>{
+              const parcelas=q.cronograma.filter(m=>m.pagamentos[d.nome]>0).map(m=>`${m.label}: ${fmtMoeda(m.pagamentos[d.nome])}`).join(" · ");
+              return `<div style="padding:9px 14px;${i?"border-top:1px solid #D9CCB0":""}">
+                <div style="display:flex;justify-content:space-between">
+                  <span style="font-size:13px;color:${i===0?"#8B6010":"#5C4A2A"};font-weight:${i===0?700:400}">${i===0?"▶ ":""}${d.nome}</span>
+                  <span style="font-size:13px;color:#5C4A2A;font-weight:700">${fmtMoeda(d.valor)}</span>
+                </div>
+                ${parcelas?`<p style="font-size:11px;color:#8C7550;margin-top:5px;line-height:1.6">${parcelas}</p>`:""}
+              </div>`;
+            }).join("")}
           </div>
         `:`<p style="font-size:14px;color:#2A5C3A;line-height:1.8;margin-bottom:14px">Nenhuma dívida detectada nas contas conectadas agora. 🎉</p>`}
         <div class="field-wrap">
