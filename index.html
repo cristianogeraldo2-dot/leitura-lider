@@ -302,17 +302,23 @@ async function carregarFinancas(){
   if(abaAtual==="financas") renderContent();
   try{
     const [{data:accs},{data:ciclos},{data:txs}] = await Promise.all([
-      sb.from('accounts').select('balance,is_active').eq('is_active',true),
+      sb.from('accounts').select('balance,account_type,is_active').eq('is_active',true),
       sb.from('missao_5k_cycles').select('id,start_date').order('start_date',{ascending:false}).limit(1),
       sb.from('transactions').select('description,merchant_name,amount,date').order('date',{ascending:false}).limit(6),
     ]);
-    const saldoTotal=(accs||[]).reduce((s,a)=>s+Number(a.balance||0),0);
+    const ehPassivo=t=>t==="credit_card"||t==="loan"||t==="financing";
+    // Cartão/empréstimo: o "balance" é o quanto você DEVE, então entra negativo no patrimônio.
+    const saldoTotal=(accs||[]).reduce((s,a)=>{
+      const bal=Number(a.balance||0);
+      return s+(ehPassivo(a.account_type)?-bal:bal);
+    },0);
+    const dividaCartao=(accs||[]).filter(a=>ehPassivo(a.account_type)).reduce((s,a)=>s+Number(a.balance||0),0);
     let statusCiclo=null;
     if(ciclos&&ciclos[0]){
       const {data:st}=await sb.from('v_missao_5k_status').select('*').eq('cycle_id',ciclos[0].id).maybeSingle();
       statusCiclo=st;
     }
-    dadosFinancas={saldoTotal,statusCiclo,txs:txs||[]};
+    dadosFinancas={saldoTotal,dividaCartao,statusCiclo,txs:txs||[]};
   }catch(e){
     dadosFinancas=null;
   }
@@ -609,8 +615,9 @@ function renderContent(){
       h+=`<div class="treino-header" style="border-color:${corSaldo}30;background:${corSaldo}08">
         <div style="display:flex;justify-content:space-between;align-items:flex-start">
           <div>
-            <p style="font-size:9px;letter-spacing:2px;color:${corSaldo};text-transform:uppercase;font-weight:700;margin-bottom:6px">Saldo Total</p>
+            <p style="font-size:9px;letter-spacing:2px;color:${corSaldo};text-transform:uppercase;font-weight:700;margin-bottom:6px">Patrimônio Líquido</p>
             <h2 class="serif" style="font-size:30px;font-weight:600;color:${corSaldo}">${fmtMoeda(df.saldoTotal)}</h2>
+            ${df.dividaCartao>0?`<p style="font-size:12px;color:#8B2500;margin-top:6px">Dívida em cartão/empréstimo: <strong>${fmtMoeda(df.dividaCartao)}</strong></p>`:""}
           </div>
           <button onclick="carregarFinancas()" style="background:none;border:1px solid #D9CCB0;border-radius:8px;padding:5px 9px;cursor:pointer;font-size:13px;color:#8C7550">🔄</button>
         </div></div>`;
