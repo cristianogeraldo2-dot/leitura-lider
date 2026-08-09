@@ -370,7 +370,7 @@ async function carregarFinancas(){
   if(abaAtual==="financas") renderContent();
   try{
     const [{data:accs},{data:ciclos},{data:txs}] = await Promise.all([
-      sb.from('accounts').select('balance,account_type,is_active,name,institution_label').eq('is_active',true),
+      sb.from('accounts').select('balance,account_type,is_active,name,institution_label,masked_number').eq('is_active',true),
       sb.from('missao_5k_cycles').select('id,start_date').order('start_date',{ascending:false}).limit(1),
       sb.from('transactions').select('description,merchant_name,amount,date').order('date',{ascending:false}).limit(6),
     ]);
@@ -724,6 +724,30 @@ function renderContent(){
           ${q.extraTotal>0?`<p style="font-size:11px;color:#8B6010;margin-top:6px">+ ${fmtMoeda(q.extraTotal)} de renda extra somados neste ciclo</p>`:""}
         </div>
       </div>`;
+
+      const cartoes=(df.contasBrutas||[]).filter(a=>a.account_type==="credit_card");
+      if(cartoes.length){
+        h+=sl("Painel de Cartões");
+        const totalFaturas=cartoes.reduce((s,c)=>s+Number(c.balance||0),0);
+        h+=`<div class="card" style="margin-bottom:12px">
+          <p style="font-size:10px;color:#8B2500;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:4px">Total em faturas</p>
+          <p class="serif" style="font-size:24px;font-weight:600;color:#8B2500">${fmtMoeda(totalFaturas)}</p>
+        </div>`;
+        h+=`<div class="treino-table">`;
+        cartoes.forEach((c,i)=>{
+          h+=`<div class="treino-td ${i%2?"alt":""}" style="grid-template-columns:1fr">
+            <div style="padding:2px 0">
+              <div style="display:flex;justify-content:space-between;align-items:baseline">
+                <span style="font-size:14px;color:#2A1F0E;font-weight:700">${c.name||"Cartão"}${c.masked_number?` •••• ${c.masked_number}`:""}</span>
+                <span style="font-size:14px;color:#8B2500;font-weight:700">${fmtMoeda(c.balance)}</span>
+              </div>
+              <p style="font-size:11px;color:#8C7550;margin-top:4px">${c.institution_label||""} · Limite: dado não disponível · Vencimento: dado não disponível</p>
+            </div>
+          </div>`;
+        });
+        h+=`</div>`;
+        h+=`<p style="font-size:11px;color:#8C7550;margin-top:8px;margin-bottom:16px;line-height:1.6">⚠️ Limite, vencimento e parcelas futuras ainda não são sincronizados do Pluggy para este banco — só a fatura atual está disponível.</p>`;
+      }
 
       if(sc){
         const foraDoCiclo=sc.viver_remaining<0;
