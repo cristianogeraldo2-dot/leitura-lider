@@ -971,7 +971,7 @@ function renderContent(){
         h+=sl("Painel de Cartões");
         const totalFaturas=cartoes.reduce((s,c)=>s+Number(c.balance||0),0);
         h+=`<div class="card" style="margin-bottom:12px">
-          <p style="font-size:10px;color:#8B2500;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:4px">Total em faturas</p>
+          <p style="font-size:10px;color:#8B2500;letter-spacing:1.5px;text-transform:uppercase;font-weight:700;margin-bottom:4px">Total devido (inclui parcelas futuras)</p>
           <p class="serif" style="font-size:24px;font-weight:600;color:#8B2500">${fmtMoeda(totalFaturas)}</p>
         </div>`;
         h+=`<div class="treino-table">`;
@@ -982,12 +982,12 @@ function renderContent(){
                 <span style="font-size:14px;color:#2A1F0E;font-weight:700">${c.name||"Cartão"}${c.masked_number?` •••• ${c.masked_number}`:""}</span>
                 <span style="font-size:14px;color:#8B2500;font-weight:700">${fmtMoeda(c.balance)}</span>
               </div>
-              <p style="font-size:11px;color:#8C7550;margin-top:4px">${c.institution_label||""} · Limite: dado não disponível · Vencimento: dado não disponível</p>
+              <p style="font-size:11px;color:#8C7550;margin-top:4px">${c.institution_label||""} · Vencimento: dado não disponível</p>
             </div>
           </div>`;
         });
         h+=`</div>`;
-        h+=`<p style="font-size:11px;color:#8C7550;margin-top:8px;margin-bottom:16px;line-height:1.6">⚠️ Limite, vencimento e parcelas futuras ainda não são sincronizados do Pluggy para este banco — só a fatura atual está disponível.</p>`;
+        h+=`<p style="font-size:11px;color:#8C7550;margin-top:8px;margin-bottom:16px;line-height:1.6">⚠️ O valor por cartão é o saldo devedor total sincronizado do Pluggy (pode incluir parcelas futuras ainda não vencidas). Limite de crédito, data de vencimento e o valor exato da fatura fechada deste mês não são sincronizados nesse banco hoje — não é possível separar isso sem ampliar a sincronização.</p>`;
       }
 
       if(sc){
