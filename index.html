@@ -344,12 +344,14 @@ function adicionarRendaRecorrente(){
   const nomeEl=document.getElementById("f-renda-nome");
   const valorEl=document.getElementById("f-renda-valor");
   const mesesEl=document.getElementById("f-renda-meses");
+  const diaEl=document.getElementById("f-renda-dia");
   const nome=(nomeEl&&nomeEl.value||"").trim();
   const valor=parseFloat(String(valorEl&&valorEl.value||"").replace(",","."));
   const mesesTxt=(mesesEl&&mesesEl.value||"").trim();
+  const diaTxt=(diaEl&&diaEl.value||"").trim();
   if(!nome||isNaN(valor)||valor<=0){ renderContent(); return; }
   planoDivida.rendas=planoDivida.rendas||[];
-  planoDivida.rendas.push({nome,valor,meses:mesesTxt?parseInt(mesesTxt):null});
+  planoDivida.rendas.push({nome,valor,meses:mesesTxt?parseInt(mesesTxt):null,dia:diaTxt?parseInt(diaTxt):null});
   salvarPlanoDivida();
   renderContent();
 }
@@ -938,15 +940,16 @@ function renderContent(){
         <div class="field-wrap" style="margin-bottom:8px">
           <div class="field-label">+ Renda recorrente confiável (juros, recebíveis...)</div>
           <input type="text" id="f-renda-nome" placeholder="Nome — ex: Juros empréstimo R$7k" style="margin-bottom:8px"/>
-          <div style="display:flex;gap:8px">
+          <div style="display:flex;gap:8px;margin-bottom:8px">
             <input type="text" inputmode="decimal" id="f-renda-valor" placeholder="Valor/mês"/>
             <input type="text" inputmode="numeric" id="f-renda-meses" placeholder="Por quantos meses (vazio=sempre)"/>
           </div>
+          <input type="text" inputmode="numeric" id="f-renda-dia" placeholder="Dia do mês que recebe (opcional, ex: 19)"/>
           <button class="btn-next" style="width:100%;margin-top:8px" onclick="adicionarRendaRecorrente()">+ Adicionar renda recorrente</button>
         </div>
         ${(planoDivida.rendas||[]).length?`<div style="background:#F3EAD0;border-radius:10px;padding:2px 0;margin-bottom:0">
           ${(planoDivida.rendas||[]).map((r,i)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;${i?"border-top:1px solid #D9CCB0":""}">
-            <span style="font-size:13px;color:#2A1F0E">${r.nome} <span style="color:#8C7550">— ${fmtMoeda(r.valor)}/mês${r.meses?` por ${r.meses} meses`:""}</span></span>
+            <span style="font-size:13px;color:#2A1F0E">${r.nome} <span style="color:#8C7550">— ${fmtMoeda(r.valor)}/mês${r.meses?` por ${r.meses} meses`:""}${r.dia?` · recebe todo dia ${r.dia}`:""}</span></span>
             <button onclick="removerRendaRecorrente(${i})" style="background:none;border:1px solid #D9CCB0;border-radius:8px;padding:3px 7px;cursor:pointer;font-size:11px;color:#8C7550">✕</button>
           </div>`).join("")}
         </div>`:""}
