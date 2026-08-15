@@ -302,6 +302,17 @@ let abaAtual="manha", pilarAtivo=-1, diarioSalvo=false;
 let dadosFinancas=null, financasCarregando=false;
 let planoDivida={valorMensal:5000,extras:[]};
 function fmtMoeda(v){return(Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+function fmtRelativo(iso){
+  if(!iso) return "nunca sincronizado";
+  const diffMs=Date.now()-new Date(iso).getTime();
+  const min=Math.floor(diffMs/60000);
+  if(min<1) return "agora mesmo";
+  if(min<60) return `há ${min} min`;
+  const h=Math.floor(min/60);
+  if(h<24) return `há ${h}h`;
+  const d=Math.floor(h/24);
+  return `há ${d} dia${d>1?"s":""}`;
+}
 
 function carregarPlanoDivida(){
   try{
@@ -452,7 +463,7 @@ async function carregarFinancas(){
     const inicioMes=new Date(hoje.getFullYear(),hoje.getMonth(),1).toISOString().slice(0,10);
     const inicioProxMes=new Date(hoje.getFullYear(),hoje.getMonth()+1,1).toISOString().slice(0,10);
     const inicio3Meses=new Date(hoje.getFullYear(),hoje.getMonth()-3,1).toISOString().slice(0,10);
-    const [{data:accs},{data:ciclos},{data:txs},{data:alertas},{data:txsMes},{data:cats},{data:txsHist}] = await Promise.all([
+    const [{data:accs},{data:ciclos},{data:txs},{data:alertas},{data:txsMes},{data:cats},{data:txsHist},{data:itens}] = await Promise.all([
       sb.from('accounts').select('balance,account_type,is_active,name,institution_label,masked_number').eq('is_active',true),
       sb.from('missao_5k_cycles').select('id,start_date').order('start_date',{ascending:false}).limit(1),
       sb.from('transactions').select('description,merchant_name,amount,date').order('date',{ascending:false}).limit(6),
@@ -460,6 +471,7 @@ async function carregarFinancas(){
       sb.from('transactions').select('amount,category_id,date').gte('date',inicioMes).lt('date',inicioProxMes),
       sb.from('categories').select('id,name'),
       sb.from('transactions').select('amount,category_id,date').gte('date',inicio3Meses).lt('date',inicioMes),
+      sb.from('pluggy_items').select('connector_name,institution_label,last_synced_at,status').order('last_synced_at',{ascending:false}),
     ]);
     const catMap={};
     (cats||[]).forEach(c=>catMap[c.id]=c.name);
@@ -497,7 +509,7 @@ async function carregarFinancas(){
       const {data:st}=await sb.from('v_missao_5k_status').select('*').eq('cycle_id',ciclos[0].id).maybeSingle();
       statusCiclo=st;
     }
-    dadosFinancas={saldoTotal,dividaCartao,statusCiclo,txs:txs||[],contasBrutas:accs||[],alertas:alertas||[],categorias,totalGastoMes,desperdicio};
+    dadosFinancas={saldoTotal,dividaCartao,statusCiclo,txs:txs||[],contasBrutas:accs||[],alertas:alertas||[],categorias,totalGastoMes,desperdicio,itens:itens||[]};
   }catch(e){
     dadosFinancas=null;
   }
@@ -808,6 +820,11 @@ function renderContent(){
           </div>
           <button onclick="carregarFinancas()" style="background:none;border:1px solid #D9CCB0;border-radius:8px;padding:5px 9px;cursor:pointer;font-size:13px;color:#8C7550">🔄</button>
         </div></div>`;
+
+      if(df.itens&&df.itens.length){
+        const maisRecente=df.itens[0];
+        h+=`<p style="font-size:11px;color:#8C7550;margin-bottom:16px;text-align:right">🔗 Sincronizado ${fmtRelativo(maisRecente.last_synced_at)}${df.itens.length>1?` (${df.itens.length} instituições conectadas)`:""}</p>`;
+      }
 
       const q=calcularQuitacao(df.contasBrutas,planoDivida.valorMensal);
       const scoreObj=calcularScore(q.totalDivida,df.saldoTotal,sc);
