@@ -855,7 +855,9 @@ function renderContent(){
       const scoreObj=calcularScore(q.totalDivida,df.saldoTotal,sc);
       if(scoreObj){
         const corScore=scoreObj.score>=70?"#2A5C3A":scoreObj.score>=40?"#8B6010":"#8B2500";
+        const classif=scoreObj.score>=70?{emoji:"🟢",label:"SAUDÁVEL"}:scoreObj.score>=45?{emoji:"🟡",label:"ATENÇÃO"}:scoreObj.score>=20?{emoji:"🟠",label:"RISCO"}:{emoji:"🔴",label:"DÉFICIT CRÍTICO"};
         h+=`<div class="card" style="margin-bottom:16px;text-align:center">
+          <p style="font-size:22px;font-weight:700;color:${corScore};margin-bottom:10px">${classif.emoji} ${classif.label}</p>
           <p style="font-size:9px;letter-spacing:2px;color:${corScore};text-transform:uppercase;font-weight:700;margin-bottom:8px">Financial Health Score</p>
           <p class="serif" style="font-size:44px;font-weight:600;color:${corScore};line-height:1">${scoreObj.score}<span style="font-size:18px;color:#8C7550">/100</span></p>
           <div style="display:flex;justify-content:center;gap:18px;margin-top:12px">
