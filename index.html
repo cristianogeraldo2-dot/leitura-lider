@@ -322,6 +322,88 @@ function carregarPlanoDivida(){
 }
 function salvarPlanoDivida(){try{localStorage.setItem("ldr_plano_divida",JSON.stringify(planoDivida));}catch(e){}}
 
+let orcamentos={}, saldoMinimoCaixa=200;
+function carregarOrcamentos(){
+  try{
+    const s=localStorage.getItem("ldr_orcamentos");
+    if(s) orcamentos=JSON.parse(s);
+    const m=localStorage.getItem("ldr_saldo_minimo");
+    if(m) saldoMinimoCaixa=parseFloat(m);
+  }catch(e){}
+}
+function salvarOrcamentos(){try{localStorage.setItem("ldr_orcamentos",JSON.stringify(orcamentos));}catch(e){}}
+function atualizarOrcamento(nome,valor){
+  const n=parseFloat(String(valor||"").replace(",","."));
+  if(!isNaN(n)&&n>=0) orcamentos[nome]=n; else delete orcamentos[nome];
+  salvarOrcamentos();
+  renderContent();
+}
+function atualizarSaldoMinimo(valor){
+  const n=parseFloat(String(valor||"").replace(",","."));
+  if(!isNaN(n)&&n>=0){ saldoMinimoCaixa=n; try{localStorage.setItem("ldr_saldo_minimo",String(n));}catch(e){} }
+  renderContent();
+}
+
+function calcularOrcadoRealizado(df){
+  const nomes=new Set([...(df.categorias||[]).map(c=>c.nome),...Object.keys(df.mediaHistPorCat||{})]);
+  const hoje=new Date();
+  const diasNoMes=new Date(hoje.getFullYear(),hoje.getMonth()+1,0).getDate();
+  const diaAtual=hoje.getDate();
+  const linhas=[...nomes].map(nome=>{
+    const realizado=((df.categorias||[]).find(c=>c.nome===nome)||{}).total||0;
+    const mediaHist=(df.mediaHistPorCat||{})[nome]||0;
+    const temManual=orcamentos[nome]!=null;
+    const orcado=temManual?orcamentos[nome]:mediaHist;
+    const variacaoValor=realizado-orcado;
+    const variacaoPct=orcado>0?(variacaoValor/orcado*100):null;
+    const restante=Math.max(0,orcado-realizado);
+    const previsaoFechamento=diaAtual>0?(realizado/diaAtual*diasNoMes):realizado;
+    let semaforo="verde";
+    if(orcado>0){
+      const pct=realizado/orcado;
+      if(pct>1) semaforo="vermelho"; else if(pct>=0.8) semaforo="amarelo";
+    } else if(realizado>0) semaforo="amarelo";
+    return {nome,orcado,realizado,variacaoValor,variacaoPct,restante,previsaoFechamento,semaforo,temManual};
+  }).sort((a,b)=>b.realizado-a.realizado);
+  const totalOrcado=linhas.reduce((s,l)=>s+l.orcado,0);
+  const totalRealizado=linhas.reduce((s,l)=>s+l.realizado,0);
+  const utilizacaoTotal=totalOrcado>0?(totalRealizado/totalOrcado*100):null;
+  const maioresEstouros=linhas.filter(l=>l.variacaoValor>0).sort((a,b)=>b.variacaoValor-a.variacaoValor).slice(0,3);
+  const previsaoTotalFechamento=diaAtual>0?(totalRealizado/diaAtual*diasNoMes):totalRealizado;
+  return {linhas,totalOrcado,totalRealizado,utilizacaoTotal,maioresEstouros,previsaoTotalFechamento};
+}
+
+// Projeção diária simplificada: gasto médio histórico distribuído linearmente por dia, sem inventar
+// datas de vencimento (o banco não tem essa informação). Pagamento da dívida do mês é aplicado no
+// dia 10 como aproximação — não é a data real de vencimento de cada dívida.
+function calcularProjecaoCaixa(saldoInicial,gastoDiarioMedio,rendas,cronograma,saldoMinimo){
+  const dias=[];
+  let saldo=saldoInicial;
+  const hoje=new Date();
+  const diaAtualDoMes=hoje.getDate();
+  for(let i=0;i<90;i++){
+    const data=new Date(hoje.getFullYear(),hoje.getMonth(),hoje.getDate()+i);
+    const diaDoMes=data.getDate();
+    const mesIndex=(data.getFullYear()-hoje.getFullYear())*12+(data.getMonth()-hoje.getMonth());
+    let entrada=0;
+    (rendas||[]).forEach(r=>{
+      const dur=r.meses==null||r.meses===""?null:Number(r.meses);
+      const diaAlvo=r.dia||1;
+      if(dur!=null&&mesIndex>=dur) return;
+      // Se o dia-alvo deste mês já passou (mês atual), lança no primeiro dia da projeção em vez de pular o mês inteiro.
+      if(mesIndex===0&&diaAtualDoMes>diaAlvo){ if(i===0) entrada+=Number(r.valor||0); }
+      else if(diaDoMes===diaAlvo) entrada+=Number(r.valor||0);
+    });
+    let saidaDivida=0;
+    const pagamentoMes=(cronograma&&cronograma[mesIndex])?Object.values(cronograma[mesIndex].pagamentos).reduce((s,v)=>s+v,0):0;
+    if(mesIndex===0&&diaAtualDoMes>10){ if(i===0) saidaDivida=pagamentoMes; }
+    else if(diaDoMes===10) saidaDivida=pagamentoMes;
+    saldo=saldo+entrada-gastoDiarioMedio-saidaDivida;
+    dias.push({data,saldo,abaixoMinimo:saldo<saldoMinimo,negativo:saldo<0});
+  }
+  return dias;
+}
+
 function atualizarValorMensal(v){
   const n=parseFloat(String(v||"").replace(",","."));
   if(!isNaN(n)&&n>=0) planoDivida.valorMensal=n;
@@ -517,8 +599,10 @@ async function carregarFinancas(){
       const nome=catMap[t.category_id]||"Sem categoria";
       gastoHistPorCat[nome]=(gastoHistPorCat[nome]||0)+(-v);
     });
+    const mediaHistPorCat={};
+    Object.keys(gastoHistPorCat).forEach(nome=>{mediaHistPorCat[nome]=gastoHistPorCat[nome]/3;});
     const desperdicio=categorias.map(c=>{
-      const media=(gastoHistPorCat[c.nome]||0)/3;
+      const media=mediaHistPorCat[c.nome]||0;
       const diferenca=c.total-media;
       return {nome:c.nome,atual:c.total,media,diferenca,impactoAnual:diferenca*12};
     }).filter(d=>d.diferenca>0&&d.media>0).sort((a,b)=>b.diferenca-a.diferenca);
@@ -534,7 +618,7 @@ async function carregarFinancas(){
       const {data:st}=await sb.from('v_missao_5k_status').select('*').eq('cycle_id',ciclos[0].id).maybeSingle();
       statusCiclo=st;
     }
-    dadosFinancas={saldoTotal,dividaCartao,statusCiclo,txs:txs||[],contasBrutas:accs||[],alertas:alertas||[],categorias,totalGastoMes,desperdicio,itens:itens||[]};
+    dadosFinancas={saldoTotal,dividaCartao,statusCiclo,txs:txs||[],contasBrutas:accs||[],alertas:alertas||[],categorias,totalGastoMes,desperdicio,itens:itens||[],mediaHistPorCat};
   }catch(e){
     dadosFinancas=null;
   }
@@ -559,6 +643,7 @@ function carregar(){
     if(d){const p=JSON.parse(d); if(p.data===new Date().toDateString()) diario=p.diario||diario;}
   }catch(e){}
   carregarPlanoDivida();
+  carregarOrcamentos();
 }
 function salvarCfg(){try{localStorage.setItem("ldr_cfg",JSON.stringify(cfg));}catch(e){}}
 function salvarChecks(){try{localStorage.setItem("ldr_checks",JSON.stringify({data:new Date().toDateString(),checks}));}catch(e){}}
@@ -976,6 +1061,35 @@ function renderContent(){
         });
       }
 
+      h+=sl("Orçado vs Realizado");
+      const orc=calcularOrcadoRealizado(df);
+      const corSemaforo={verde:"#2A5C3A",amarelo:"#8B6010",vermelho:"#8B2500"};
+      const emojiSemaforo={verde:"🟢",amarelo:"🟡",vermelho:"🔴"};
+      h+=`<div class="card" style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+          <div><p style="font-size:10px;color:#8C7550;text-transform:uppercase;letter-spacing:1px;font-weight:700">Orçado no mês</p><p style="font-size:18px;font-weight:700;color:#2A1F0E">${fmtMoeda(orc.totalOrcado)}</p></div>
+          <div style="text-align:right"><p style="font-size:10px;color:#8C7550;text-transform:uppercase;letter-spacing:1px;font-weight:700">Realizado</p><p style="font-size:18px;font-weight:700;color:#2A1F0E">${fmtMoeda(orc.totalRealizado)}</p></div>
+        </div>
+        ${orc.utilizacaoTotal!=null?`<div class="prog-bar" style="width:100%;height:6px"><div class="prog-fill" style="width:${Math.min(100,orc.utilizacaoTotal)}%;background:${orc.utilizacaoTotal>100?"#8B2500":orc.utilizacaoTotal>=80?"#8B6010":"#2A5C3A"}"></div></div>
+        <p style="font-size:11px;color:#8C7550;margin-top:6px">${Math.round(orc.utilizacaoTotal)}% do orçamento total utilizado</p>`:""}
+        <p style="font-size:12px;color:#5C4A2A;margin-top:8px">Previsão de fechamento do mês, no ritmo atual: <strong>${fmtMoeda(orc.previsaoTotalFechamento)}</strong></p>
+        ${orc.maioresEstouros.length?`<p style="font-size:12px;color:#8B2500;margin-top:6px">Maiores estouros: ${orc.maioresEstouros.map(l=>`${l.nome} (+${fmtMoeda(l.variacaoValor)})`).join(", ")}</p>`:""}
+      </div>`;
+      orc.linhas.slice(0,8).forEach(l=>{
+        h+=`<div class="card" style="margin-bottom:8px;padding:12px 16px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+            <span style="font-size:13px;color:#2A1F0E;font-weight:700">${emojiSemaforo[l.semaforo]} ${l.nome}</span>
+            <span style="font-size:12px;color:${corSemaforo[l.semaforo]};font-weight:700">${l.variacaoPct!=null?`${l.variacaoPct>0?"+":""}${Math.round(l.variacaoPct)}%`:"—"}</span>
+          </div>
+          <p style="font-size:11px;color:#8C7550;margin-bottom:6px">Realizado ${fmtMoeda(l.realizado)} de ${fmtMoeda(l.orcado)} orçado${!l.temManual?" (sugerido pela média 3 meses)":""} · resta ${fmtMoeda(l.restante)}</p>
+          <div style="display:flex;gap:6px;align-items:center">
+            <span style="font-size:10px;color:#8C7550">Ajustar orçamento:</span>
+            <input type="text" inputmode="decimal" value="${l.orcado?l.orcado.toFixed(2):""}" onchange="atualizarOrcamento('${l.nome.replace(/'/g,"\\'")}',this.value)" style="flex:1;padding:6px 8px;font-size:12px;border:1px solid #D9CCB0;border-radius:6px"/>
+          </div>
+        </div>`;
+      });
+      h+=`<p style="font-size:10px;color:#8C7550;margin-top:4px;margin-bottom:16px">Sem orçamento definido, sugerimos a média real dos últimos 3 meses — edite o valor a qualquer momento.</p>`;
+
       if(sc&&sc.monthly_income){
         h+=sl("Fluxo de Caixa Projetado");
         h+=`<p style="font-size:12px;color:#8C7550;line-height:1.6;margin-bottom:10px">Situação equilibrada em <strong style="color:#2A1F0E">${q.mesesRestantes} ${q.mesesRestantes===1?"mês":"meses"}</strong>, mantendo renda e ritmo de pagamento atuais (sem dívida nova, sem juros extra).</p>`;
@@ -990,6 +1104,48 @@ function renderContent(){
         });
         h+=`</div>`;
         h+=`<p style="font-size:10px;color:#8C7550;margin-top:8px;margin-bottom:16px">Projeção linear: assume mesma renda e ritmo de pagamento, sem dívida nova nem juros extra além do já embutido no cronograma.</p>`;
+      }
+
+      {
+        const saldoContaCorrente=(df.contasBrutas||[]).filter(a=>a.account_type==="checking").reduce((s,a)=>s+Number(a.balance||0),0);
+        const totalMediaHist=Object.values(df.mediaHistPorCat||{}).reduce((s,v)=>s+v,0);
+        const gastoDiarioMedio=totalMediaHist/30;
+        h+=sl("Projeção de Caixa · 90 dias");
+        if(totalMediaHist<=0){
+          h+=`<div class="card" style="margin-bottom:16px"><p style="font-size:13px;color:#8C7550">Ainda não há histórico de 3 meses suficiente pra projetar o caixa dia a dia.</p></div>`;
+        } else {
+          const proj=calcularProjecaoCaixa(saldoContaCorrente,gastoDiarioMedio,planoDivida.rendas,q.cronograma,saldoMinimoCaixa);
+          const diaRisco=proj.find(d=>d.negativo);
+          const diasAbaixoMinimo=proj.filter(d=>d.abaixoMinimo).length;
+          const saldo30=proj[29]?proj[29].saldo:null, saldo60=proj[59]?proj[59].saldo:null, saldo90=proj[89]?proj[89].saldo:null;
+          if(diaRisco){
+            h+=`<div class="red-box" style="margin-bottom:14px">
+              <p style="font-size:9px;letter-spacing:2px;color:#8B2500;text-transform:uppercase;margin-bottom:6px;font-weight:700">⚠️ Risco de cheque especial</p>
+              <p style="font-size:15px;color:#2A1F0E;line-height:1.7">Saldo da conta corrente fica negativo em <strong>${diaRisco.data.toLocaleDateString('pt-BR')}</strong>, no ritmo atual.</p>
+            </div>`;
+          }
+          h+=`<div class="card" style="margin-bottom:12px">
+            <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+              <div><p style="font-size:10px;color:#8C7550;text-transform:uppercase;font-weight:700">Saldo hoje (conta corrente)</p><p style="font-size:16px;font-weight:700;color:#2A1F0E">${fmtMoeda(saldoContaCorrente)}</p></div>
+              <div style="text-align:right"><p style="font-size:10px;color:#8C7550;text-transform:uppercase;font-weight:700">Posso gastar hoje</p><p style="font-size:16px;font-weight:700;color:#2A1F0E">${sc&&sc.suggested_daily_limit!=null?fmtMoeda(sc.suggested_daily_limit):"dado não disponível"}</p></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:8px">
+              <div><p style="font-size:10px;color:#8C7550;text-transform:uppercase;font-weight:700">Em 30 dias</p><p style="font-size:14px;font-weight:700;color:${saldo30<0?"#8B2500":"#2A1F0E"}">${fmtMoeda(saldo30)}</p></div>
+              <div><p style="font-size:10px;color:#8C7550;text-transform:uppercase;font-weight:700">Em 60 dias</p><p style="font-size:14px;font-weight:700;color:${saldo60<0?"#8B2500":"#2A1F0E"}">${fmtMoeda(saldo60)}</p></div>
+              <div style="text-align:right"><p style="font-size:10px;color:#8C7550;text-transform:uppercase;font-weight:700">Em 90 dias</p><p style="font-size:14px;font-weight:700;color:${saldo90<0?"#8B2500":"#2A1F0E"}">${fmtMoeda(saldo90)}</p></div>
+            </div>
+            <div class="field-wrap" style="margin-top:12px;margin-bottom:0">
+              <div class="field-label">Saldo mínimo de segurança</div>
+              <input type="text" inputmode="decimal" value="${saldoMinimoCaixa}" onchange="atualizarSaldoMinimo(this.value)"/>
+            </div>
+            <p style="font-size:12px;color:#8B6010;margin-top:8px">${diasAbaixoMinimo} de 90 dias projetados abaixo do saldo mínimo</p>
+          </div>`;
+          const maioresDrenos=Object.entries(df.mediaHistPorCat||{}).sort((a,b)=>b[1]-a[1]).slice(0,3);
+          if(maioresDrenos.length){
+            h+=`<p style="font-size:12px;color:#5C4A2A;margin-bottom:16px">Maiores drenos de caixa (média mensal): ${maioresDrenos.map(([n,v])=>`${n} (${fmtMoeda(v)})`).join(", ")}</p>`;
+          }
+          h+=`<p style="font-size:10px;color:#8C7550;margin-top:-8px;margin-bottom:16px">Projeção aproximada: gasto médio distribuído por dia (sem datas de vencimento reais, que não estão disponíveis no banco) e pagamento de dívida do mês aplicado no dia 10.</p>`;
+        }
       }
 
       h+=sl("Simulador — E Se?");
