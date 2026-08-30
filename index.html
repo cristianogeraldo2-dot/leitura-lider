@@ -300,7 +300,7 @@ function gerarTreino(cfg, diaS){
 let cfg=null, checks={}, diario={g1:"",g2:"",g3:"",aprendizado:"",melhoria:"",intencao:""};
 let abaAtual="manha", pilarAtivo=-1, diarioSalvo=false;
 let dadosFinancas=null, financasCarregando=false;
-let planoDivida={valorMensal:5000,extras:[],rendas:[],pagasManualmente:[]};
+let planoDivida={valorMensal:5000,extras:[],rendas:[],saldosManuais:{}};
 function fmtMoeda(v){return(Number(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
 function fmtRelativo(iso){
   if(!iso) return "nunca sincronizado";
@@ -317,7 +317,16 @@ function fmtRelativo(iso){
 function carregarPlanoDivida(){
   try{
     const s=localStorage.getItem("ldr_plano_divida");
-    if(s) planoDivida=Object.assign({valorMensal:5000,extras:[],rendas:[],pagasManualmente:[]},JSON.parse(s));
+    if(s){
+      const carregado=JSON.parse(s);
+      planoDivida=Object.assign({valorMensal:5000,extras:[],rendas:[],saldosManuais:{}},carregado);
+      // migração: versão antiga usava lista binária "pagasManualmente" (zerava a dívida inteira)
+      if(Array.isArray(carregado.pagasManualmente)){
+        planoDivida.saldosManuais=planoDivida.saldosManuais||{};
+        carregado.pagasManualmente.forEach(nome=>{planoDivida.saldosManuais[nome]=0;});
+        delete planoDivida.pagasManualmente;
+      }
+    }
   }catch(e){}
 }
 function salvarPlanoDivida(){try{localStorage.setItem("ldr_plano_divida",JSON.stringify(planoDivida));}catch(e){}}
@@ -443,30 +452,33 @@ function removerRendaRecorrente(i){
   renderContent();
 }
 
-function marcarDividaPaga(nome){
-  planoDivida.pagasManualmente=planoDivida.pagasManualmente||[];
-  if(!planoDivida.pagasManualmente.includes(nome)) planoDivida.pagasManualmente.push(nome);
+function atualizarSaldoManual(nome,valor){
+  planoDivida.saldosManuais=planoDivida.saldosManuais||{};
+  const n=parseFloat(String(valor||"").replace(",","."));
+  if(!isNaN(n)&&n>=0) planoDivida.saldosManuais[nome]=n;
   salvarPlanoDivida();
   renderContent();
 }
-function desmarcarDividaPaga(nome){
-  planoDivida.pagasManualmente=(planoDivida.pagasManualmente||[]).filter(n=>n!==nome);
+function removerSaldoManual(nome){
+  if(planoDivida.saldosManuais) delete planoDivida.saldosManuais[nome];
   salvarPlanoDivida();
   renderContent();
 }
 
 // Snowball: cheque especial primeiro (juro mais alto quase sempre no Brasil), depois cartões do menor pro maior.
 function calcularQuitacao(contas,valorMensal,extraOverride){
-  const pagasManualmente=planoDivida.pagasManualmente||[];
+  const saldosManuais=planoDivida.saldosManuais||{};
   const dividas=[];
   (contas||[]).forEach(a=>{
     const bal=Number(a.balance||0);
     if(a.account_type==="checking"&&bal<0){
       const nome="Cheque especial"+(a.institution_label?` (${a.institution_label})`:"");
-      if(!pagasManualmente.includes(nome)) dividas.push({nome,valor:-bal,tipo:"cheque"});
+      const valor=saldosManuais[nome]!=null?saldosManuais[nome]:-bal;
+      if(valor>0) dividas.push({nome,valor,tipo:"cheque"});
     } else if((a.account_type==="credit_card"||a.account_type==="loan"||a.account_type==="financing")&&bal>0){
       const nome=a.name||"Cartão/Empréstimo";
-      if(!pagasManualmente.includes(nome)) dividas.push({nome,valor:bal,tipo:"cartao"});
+      const valor=saldosManuais[nome]!=null?saldosManuais[nome]:bal;
+      if(valor>0) dividas.push({nome,valor,tipo:"cartao"});
     }
   });
   dividas.sort((a,b)=>{
@@ -1023,15 +1035,18 @@ function renderContent(){
                   <span style="font-size:13px;color:#5C4A2A;font-weight:700;white-space:nowrap">${fmtMoeda(d.valor)}</span>
                 </div>
                 ${parcelas?`<p style="font-size:11px;color:#8C7550;margin-top:5px;line-height:1.6">${parcelas}</p>`:""}
-                <button onclick="marcarDividaPaga('${d.nome.replace(/'/g,"\\'")}')" style="margin-top:6px;background:none;border:1px solid #2A5C3A60;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:11px;color:#2A5C3A">✓ Já paguei essa (o saldo sincronizado ainda não atualizou)</button>
+                <div style="display:flex;gap:6px;align-items:center;margin-top:6px">
+                  <span style="font-size:10px;color:#8C7550">Saldo real (se o sincronizado estiver errado):</span>
+                  <input type="text" inputmode="decimal" placeholder="${d.valor.toFixed(2)}" onchange="atualizarSaldoManual('${d.nome.replace(/'/g,"\\'")}',this.value)" style="width:90px;padding:5px 7px;font-size:12px;border:1px solid #D9CCB0;border-radius:6px"/>
+                </div>
               </div>`;
             }).join("")}
           </div>
         `:`<p style="font-size:14px;color:#2A5C3A;line-height:1.8;margin-bottom:14px">Nenhuma dívida detectada nas contas conectadas agora. 🎉</p>`}
-        ${(planoDivida.pagasManualmente||[]).length?`<div style="background:#F0FFF4;border:1px solid #2A5C3A40;border-radius:10px;padding:2px 0;margin-bottom:14px">
-          ${(planoDivida.pagasManualmente||[]).map(nome=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px">
-            <span style="font-size:12px;color:#2A5C3A">✓ ${nome} — marcada como paga</span>
-            <button onclick="desmarcarDividaPaga('${nome.replace(/'/g,"\\'")}')" style="background:none;border:1px solid #D9CCB0;border-radius:8px;padding:3px 7px;cursor:pointer;font-size:11px;color:#8C7550">desfazer</button>
+        ${Object.keys(planoDivida.saldosManuais||{}).length?`<div style="background:#F0FFF4;border:1px solid #2A5C3A40;border-radius:10px;padding:2px 0;margin-bottom:14px">
+          ${Object.entries(planoDivida.saldosManuais||{}).map(([nome,valor])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px">
+            <span style="font-size:12px;color:#2A5C3A">✓ ${nome} — saldo corrigido pra ${fmtMoeda(valor)}${valor<=0?" (quitada)":""}</span>
+            <button onclick="removerSaldoManual('${nome.replace(/'/g,"\\'")}')" style="background:none;border:1px solid #D9CCB0;border-radius:8px;padding:3px 7px;cursor:pointer;font-size:11px;color:#8C7550">desfazer</button>
           </div>`).join("")}
         </div>`:""}
         <div class="field-wrap">
