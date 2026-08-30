@@ -1225,7 +1225,7 @@ function renderContent(){
           </div>`;
         });
         h+=`</div>`;
-        h+=`<p style="font-size:11px;color:#8C7550;margin-top:8px;margin-bottom:16px;line-height:1.6">⚠️ O valor por cartão é o saldo devedor total sincronizado do Pluggy (pode incluir parcelas futuras ainda não vencidas). Limite de crédito, data de vencimento e o valor exato da fatura fechada deste mês não são sincronizados nesse banco hoje — não é possível separar isso sem ampliar a sincronização.</p>`;
+        h+=`<p style="font-size:11px;color:#8C7550;margin-top:8px;margin-bottom:16px;line-height:1.6">⚠️ Isso é o <strong>total devido no cartão</strong> (fatura atual + todas as parcelas futuras já compradas) — <strong>não é a fatura de um mês só</strong>. Por isso costuma ser maior que o número que o app do seu banco mostra como "fatura aberta" ou "fatura de outubro": lá é só aquele mês; aqui é a dívida inteira do cartão. Pra ficar livre do cartão de verdade, é esse total que precisa zerar, não só a fatura mensal. Limite de crédito e data de vencimento não são sincronizados nesse banco hoje.</p>`;
       }
 
       if(sc){
