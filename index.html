@@ -159,6 +159,24 @@ const FRASES = [
   {t:"Protagonismo começa antes da primeira reunião.",f:"Método Diário GAV"},
   {t:"O corpo forte suporta os dias difíceis. Cuide dele hoje para liderar amanhã.",f:"Método Diário"},
 ];
+const LIVROS = [
+  {titulo:"O Milagre da Manhã",autor:"Hal Elrod",pilar:"Conhecimento",porque:"Rotina matinal como base de uma vida de alta performance — conecta direto com o ritual que você já faz aqui."},
+  {titulo:"Hábitos Atômicos",autor:"James Clear",pilar:"Conhecimento",porque:"Pequenas mudanças diárias compostas ao longo do tempo — a ciência por trás dos seus checklists."},
+  {titulo:"Os 7 Hábitos das Pessoas Altamente Eficazes",autor:"Stephen R. Covey",pilar:"Trabalho",porque:"Clássico sobre proatividade e prioridades — base de qualquer liderança real."},
+  {titulo:"O Monge e o Executivo",autor:"James C. Hunter",pilar:"Trabalho",porque:"Liderança servidora: autoridade que nasce do exemplo, não do cargo."},
+  {titulo:"Comece Pelo Porquê",autor:"Simon Sinek",pilar:"Trabalho",porque:"Propósito como motor — por que seu time (e você) faz o que faz."},
+  {titulo:"As 21 Irrefutáveis Leis da Liderança",autor:"John C. Maxwell",pilar:"Trabalho",porque:"Princípios práticos testados em décadas de liderança real."},
+  {titulo:"Mindset",autor:"Carol Dweck",pilar:"Conhecimento",porque:"A diferença entre mentalidade fixa e de crescimento — a raiz de toda evolução pessoal."},
+  {titulo:"O Poder do Hábito",autor:"Charles Duhigg",pilar:"Saúde",porque:"Como hábitos se formam e como você pode reescrever os seus."},
+  {titulo:"Essencialismo",autor:"Greg McKeown",pilar:"Ambiente",porque:"A disciplina de fazer menos, porém melhor — contra o excesso de compromissos."},
+  {titulo:"Pai Rico, Pai Pobre",autor:"Robert Kiyosaki",pilar:"Finanças",porque:"Mentalidade financeira — a diferença entre trabalhar por dinheiro e fazer o dinheiro trabalhar."},
+  {titulo:"O Homem Mais Rico da Babilônia",autor:"George S. Clason",pilar:"Finanças",porque:"Princípios atemporais de poupança e disciplina financeira, em forma de parábola."},
+  {titulo:"A Coragem de Ser Imperfeito",autor:"Brené Brown",pilar:"Família",porque:"Vulnerabilidade como força — presença real nas relações que importam."},
+  {titulo:"Quem Pensa Enriquece",autor:"Napoleon Hill",pilar:"Trabalho",porque:"Mentalidade de protagonismo — você é maior que o problema."},
+  {titulo:"Rápido e Devagar",autor:"Daniel Kahneman",pilar:"Conhecimento",porque:"Como a mente toma decisões — entenda seus próprios vieses antes de decidir."},
+  {titulo:"Em Busca de Sentido",autor:"Viktor Frankl",pilar:"Deus",porque:"Propósito e significado mesmo nas circunstâncias mais difíceis — base para qualquer âncora espiritual."},
+  {titulo:"Como Fazer Amigos e Influenciar Pessoas",autor:"Dale Carnegie",pilar:"Amigos",porque:"O clássico sobre conexão genuína e construção de relações de confiança."},
+];
 const PILARES = [
   {nome:"Deus",cor:"#B8860B",desc:"Âncora espiritual — oração antes do celular"},
   {nome:"Saúde",cor:"#8B2500",desc:"Treino e movimento — combustível de liderança"},
@@ -673,7 +691,7 @@ function carregar(){
   carregarOrcamentos();
 }
 function salvarCfg(){try{localStorage.setItem("ldr_cfg",JSON.stringify(cfg));}catch(e){}}
-function salvarChecks(){try{localStorage.setItem("ldr_checks",JSON.stringify({data:new Date().toDateString(),checks}));}catch(e){}}
+function salvarChecks(){try{localStorage.setItem("ldr_checks",JSON.stringify({data:new Date().toDateString(),checks}));}catch(e){} registrarEvolucao();}
 function salvarDiario(){try{localStorage.setItem("ldr_diario",JSON.stringify({data:new Date().toDateString(),diario}));}catch(e){}}
 
 function show(id){
@@ -817,10 +835,34 @@ function renderApp(){
   renderContent();
 }
 
+function calcularPctDia(){
+  const p=PERFIS[cfg.perfil]||PERFIS.lider;
+  const allK=[...p.chM,...p.chT,...CHF,...p.chN].map((_,i)=>`c${i}`);
+  return Math.round(allK.filter(k=>checks[k]).length/allK.length*100);
+}
+function registrarEvolucao(){
+  try{
+    const s=localStorage.getItem("ldr_evolucao");
+    let hist=s?JSON.parse(s):[];
+    const hoje=new Date().toDateString();
+    const pct=calcularPctDia();
+    const idx=hist.findIndex(h=>h.data===hoje);
+    if(idx>=0) hist[idx]={data:hoje,pct,perfil:cfg.perfil};
+    else hist.push({data:hoje,pct,perfil:cfg.perfil});
+    if(hist.length>120) hist=hist.slice(hist.length-120);
+    localStorage.setItem("ldr_evolucao",JSON.stringify(hist));
+  }catch(e){}
+}
+function carregarEvolucao(){
+  try{
+    const s=localStorage.getItem("ldr_evolucao");
+    return s?JSON.parse(s):[];
+  }catch(e){ return []; }
+}
+
 function renderHeader(){
   const hoje=new Date(), dia=hoje.getDate(), p=PERFIS[cfg.perfil]||PERFIS.lider;
-  const allK=[...p.chM,...p.chT,...CHF,...p.chN].map((_,i)=>`c${i}`);
-  const pct=Math.round(allK.filter(k=>checks[k]).length/allK.length*100);
+  const pct=calcularPctDia();
   const frase=FRASES[dia%FRASES.length];
   document.getElementById("app-header").innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -910,6 +952,16 @@ function renderContent(){
     h+=`<p style="font-size:13px;color:#5C4A2A;font-style:italic;margin-bottom:18px;line-height:1.8">"Este é o dia que o Senhor fez; alegremo-nos e nos regozijemos nele." — Sl 118:24</p>`;
     h+=card("🙏","Âncora Espiritual",`${cfg.acordar} · 5 min`,"Antes do celular. 3 respirações, agradecimento, 1 oração. Pergunta: Quem eu quero ser hoje?");
     h+=card("📖","Alimentação Mental","15 min de leitura","Liderança, desenvolvimento ou tema da sua área. Anote 1 insight aplicável ao seu dia.");
+    {
+      const dia=new Date().getDate();
+      const livro=LIVROS[dia%LIVROS.length];
+      h+=`<div class="frase-box">
+        <p style="font-size:9px;letter-spacing:2px;color:#8B6010;text-transform:uppercase;font-weight:700;margin-bottom:6px">📚 Livro do Dia · Pilar ${livro.pilar}</p>
+        <p style="font-size:16px;font-weight:700;color:#2A1F0E;margin-bottom:2px">${livro.titulo}</p>
+        <p style="font-size:12px;color:#8C7550;margin-bottom:8px">${livro.autor}</p>
+        <p style="font-size:13px;color:#5C4A2A;line-height:1.7">${livro.porque}</p>
+      </div>`;
+    }
     h+=card("🎯","3 Prioridades do Dia","10 min","P1: O que só EU posso fazer hoje? P2: Quem precisa de mim? P3: O que vou aprender?");
     h+=card("🚀","Vai pro campo",`${cfg.trabInicio} · Início`,"Mente preparada. Prioridades definidas. Entra no modo protagonista — não no modo reativo.");
     h+=sl("Check · Manhã");
@@ -1393,6 +1445,34 @@ function renderContent(){
 
     h+=sl("Check · Noite");
     p.chN.forEach((txt,i)=>h+=chkItem(`c${p.chM.length+p.chT.length+CHF.length+i}`,txt));
+
+    h+=sl("Sua Evolução");
+    {
+      const hist=carregarEvolucao();
+      if(hist.length<2){
+        h+=`<div class="card"><p style="font-size:13px;color:#8C7550">Ainda não há histórico suficiente — volte amanhã pra começar a ver sua tendência real, dia a dia.</p></div>`;
+      } else {
+        const ultimos7=hist.slice(-7);
+        const media7=Math.round(ultimos7.reduce((s,h2)=>s+h2.pct,0)/ultimos7.length);
+        let streak=0;
+        for(let i=hist.length-1;i>=0;i--){ if(hist[i].pct>=50) streak++; else break; }
+        h+=`<div class="card" style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between">
+            <div><p style="font-size:10px;color:#8C7550;text-transform:uppercase;font-weight:700">Média 7 dias</p><p style="font-size:20px;font-weight:700;color:#2A1F0E">${media7}%</p></div>
+            <div style="text-align:right"><p style="font-size:10px;color:#8C7550;text-transform:uppercase;font-weight:700">Sequência (≥50%)</p><p style="font-size:20px;font-weight:700;color:#2A1F0E">${streak} dia${streak===1?"":"s"}</p></div>
+          </div>
+        </div>`;
+        h+=`<div style="display:flex;gap:4px;align-items:flex-end;height:70px;margin-bottom:16px">`;
+        ultimos7.forEach(h2=>{
+          const alt=Math.max(4,Math.round(h2.pct*0.6));
+          h+=`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+            <div style="width:100%;height:${alt}px;background:#8B6010;border-radius:4px 4px 0 0"></div>
+            <span style="font-size:8px;color:#8C7550">${new Date(h2.data).toLocaleDateString('pt-BR',{weekday:'short'}).slice(0,3)}</span>
+          </div>`;
+        });
+        h+=`</div>`;
+      }
+    }
 
     h+=sl("8 Pilares · Radar Semanal");
     h+=`<div class="pilar-grid">`;
