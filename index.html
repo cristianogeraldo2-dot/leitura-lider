@@ -615,34 +615,34 @@ async function carregarFinancas(){
     const inicioMes=new Date(hoje.getFullYear(),hoje.getMonth(),1).toISOString().slice(0,10);
     const inicioProxMes=new Date(hoje.getFullYear(),hoje.getMonth()+1,1).toISOString().slice(0,10);
     const inicio3Meses=new Date(hoje.getFullYear(),hoje.getMonth()-3,1).toISOString().slice(0,10);
-    const [{data:accs},{data:ciclos},{data:txs},{data:alertas},{data:txsMes},{data:cats},{data:txsHist},{data:itens}] = await Promise.all([
+    const [{data:accs},{data:ciclos},{data:txs},{data:alertas},{data:txsMes},{data:cats},{data:txsHist},{data:itens},{data:previstas}] = await Promise.all([
       sb.from('accounts').select('balance,account_type,is_active,name,institution_label,masked_number').eq('is_active',true),
       sb.from('missao_5k_cycles').select('id,start_date').order('start_date',{ascending:false}).limit(1),
-      sb.from('transactions').select('description,merchant_name,amount,date').order('date',{ascending:false}).limit(6),
+      sb.from('v_transactions_normalized').select('description,merchant_name,amount:valor_original,date:data_transacao,natureza,pendente,account_type').eq('realizada',true).order('data_transacao',{ascending:false}).order('data_importacao',{ascending:false}).limit(8),
       sb.from('alerts').select('id,type,severity,title,message,created_at').is('dismissed_at',null).order('created_at',{ascending:false}).limit(8),
-      sb.from('transactions').select('amount,category_id,date').gte('date',inicioMes).lt('date',inicioProxMes),
+      sb.from('v_transactions_normalized').select('valor,natureza,categoria,data_transacao').eq('realizada',true).in('natureza',['despesa','estorno']).gte('data_transacao',inicioMes).lt('data_transacao',inicioProxMes),
       sb.from('categories').select('id,name'),
-      sb.from('transactions').select('amount,category_id,date').gte('date',inicio3Meses).lt('date',inicioMes),
+      sb.from('v_transactions_normalized').select('valor,natureza,categoria,data_transacao').eq('realizada',true).in('natureza',['despesa','estorno']).gte('data_transacao',inicio3Meses).lt('data_transacao',inicioMes),
       sb.from('pluggy_items').select('connector_name,institution_label,last_synced_at,status').order('last_synced_at',{ascending:false}),
+      sb.from('v_transactions_normalized').select('description,merchant_name,valor,natureza,data_transacao').eq('prevista',true).order('data_transacao',{ascending:true}).limit(20),
     ]);
     const catMap={};
     (cats||[]).forEach(c=>catMap[c.id]=c.name);
     const gastoPorCat={};
+    // Despesa soma e estorno abate. O significado do sinal por tipo de conta (conta corrente x cartão)
+    // já vem resolvido em v_transactions_normalized; compras de cartão são positivas na origem.
+    const efeitoGasto=t=>t.natureza==="estorno"?-Number(t.valor||0):Number(t.valor||0);
     (txsMes||[]).forEach(t=>{
-      const v=Number(t.amount||0);
-      if(v>=0) return; // só despesas (valores negativos)
-      const nome=catMap[t.category_id]||"Sem categoria";
-      gastoPorCat[nome]=(gastoPorCat[nome]||0)+(-v);
+      const nome=t.categoria||"Sem categoria";
+      gastoPorCat[nome]=(gastoPorCat[nome]||0)+efeitoGasto(t);
     });
     const categorias=Object.entries(gastoPorCat).map(([nome,total])=>({nome,total})).sort((a,b)=>b.total-a.total);
     const totalGastoMes=categorias.reduce((s,c)=>s+c.total,0);
 
     const gastoHistPorCat={};
     (txsHist||[]).forEach(t=>{
-      const v=Number(t.amount||0);
-      if(v>=0) return;
-      const nome=catMap[t.category_id]||"Sem categoria";
-      gastoHistPorCat[nome]=(gastoHistPorCat[nome]||0)+(-v);
+      const nome=t.categoria||"Sem categoria";
+      gastoHistPorCat[nome]=(gastoHistPorCat[nome]||0)+efeitoGasto(t);
     });
     const mediaHistPorCat={};
     Object.keys(gastoHistPorCat).forEach(nome=>{mediaHistPorCat[nome]=gastoHistPorCat[nome]/3;});
@@ -663,7 +663,7 @@ async function carregarFinancas(){
       const {data:st}=await sb.from('v_missao_5k_status').select('*').eq('cycle_id',ciclos[0].id).maybeSingle();
       statusCiclo=st;
     }
-    dadosFinancas={saldoTotal,dividaCartao,statusCiclo,txs:txs||[],contasBrutas:accs||[],alertas:alertas||[],categorias,totalGastoMes,desperdicio,itens:itens||[],mediaHistPorCat};
+    dadosFinancas={saldoTotal,dividaCartao,statusCiclo,txs:txs||[],previstas:previstas||[],contasBrutas:accs||[],alertas:alertas||[],categorias,totalGastoMes,desperdicio,itens:itens||[],mediaHistPorCat};
   }catch(e){
     dadosFinancas=null;
   }
@@ -1311,11 +1311,27 @@ function renderContent(){
       if(df.txs.length){
         h+=sl("Últimos Lançamentos");
         h+=`<div class="treino-table">`;
+        const ROT={despesa:"compra/saída",receita:"entrada",estorno:"estorno",pagamento_fatura:"pagto. de fatura",transferencia_interna:"transferência entre contas",investimento:"investimento"};
+        const COR={despesa:"#8B2500",receita:"#2A5C3A",estorno:"#2A5C3A",pagamento_fatura:"#7A6A4A",transferencia_interna:"#7A6A4A",investimento:"#7A6A4A"};
         df.txs.forEach((t,i)=>{
-          const cor=Number(t.amount)<0?"#8B2500":"#2A5C3A";
-          h+=`<div class="treino-td ${i%2?"alt":""}" style="grid-template-columns:1fr 100px">
-            <span style="font-size:13px;color:#2A1F0E">${t.merchant_name||t.description||"—"}</span>
-            <span style="font-size:13px;color:${cor};font-weight:700;text-align:right">${fmtMoeda(t.amount)}</span>
+          const cor=COR[t.natureza]||(Number(t.amount)<0?"#8B2500":"#2A5C3A");
+          const sinal=t.natureza==="despesa"?"-":(t.natureza==="receita"||t.natureza==="estorno"?"+":"");
+          const dt=t.date?new Date(t.date+"T12:00:00").toLocaleDateString("pt-BR"):"";
+          h+=`<div class="treino-td ${i%2?"alt":""}" style="grid-template-columns:1fr 110px">
+            <span style="font-size:13px;color:#2A1F0E">${t.merchant_name||t.description||"—"}<br><span style="font-size:10px;color:#9A8A6A">${dt} · ${ROT[t.natureza]||""}${t.pendente?" · pendente":""}</span></span>
+            <span style="font-size:13px;color:${cor};font-weight:700;text-align:right">${sinal}${fmtMoeda(Math.abs(Number(t.amount)))}</span>
+          </div>`;
+        });
+        h+=`</div>`;
+      }
+      if((df.previstas||[]).length){
+        h+=sl("Previstos (parcelas e compras futuras)");
+        h+=`<p style="font-size:12px;color:#7A6A4A;margin-bottom:8px;line-height:1.6">Ainda não aconteceram: não entram no gasto do mês nem na lista acima.</p><div class="treino-table">`;
+        df.previstas.forEach((t,i)=>{
+          const dt=new Date(t.data_transacao+"T12:00:00").toLocaleDateString("pt-BR");
+          h+=`<div class="treino-td ${i%2?"alt":""}" style="grid-template-columns:1fr 110px">
+            <span style="font-size:13px;color:#2A1F0E">${t.merchant_name||t.description||"—"}<br><span style="font-size:10px;color:#9A8A6A">previsto para ${dt}</span></span>
+            <span style="font-size:13px;color:#7A6A4A;font-weight:700;text-align:right">${fmtMoeda(Number(t.valor))}</span>
           </div>`;
         });
         h+=`</div>`;
